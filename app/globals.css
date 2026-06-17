@@ -1,3 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #171717;
+  --color-muted: #62615d;
+  --color-line: #dedbd2;
+  --color-paper: #fffdf7;
+  --color-soft: #f5f1e7;
+  --color-brand: #245b45;
+  --color-brand-deep: #123527;
+  --color-brand-soft: #e2f0e5;
+  --color-gold: #d99b2b;
+}
+
 :root {
   --ink: #171717;
   --muted: #62615d;
