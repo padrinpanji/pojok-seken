@@ -189,14 +189,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               </div>
               <div className="detail-actions">
                 <a
-                  className="button"
+                  className="button glow"
                   href={`https://wa.me/628123456789?text=${whatsappMessage}`}
                   data-test-id="product-whatsapp-link"
                 >
                   <WhatsAppIcon />
                   Hubungi Penjual (WhatsApp)
                 </a>
-                <Link className="button secondary" href="/contact" data-test-id="product-chat-link">
+                <Link className="button secondary glow-soft" href="/contact" data-test-id="product-chat-link">
                   <ChatIcon />
                   Kirim Chat Langsung (Live Chat)
                 </Link>

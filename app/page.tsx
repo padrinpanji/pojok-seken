@@ -4,6 +4,15 @@ import SchemaScript from "@/components/SchemaScript";
 import { MapIcon, SearchIcon, ShieldIcon, SparkIcon } from "@/components/Icons";
 import { categories, formatPrice, products, siteConfig } from "@/data/products";
 
+const categoryIconIds: Record<string, string> = {
+  Elektronik: "category-electronics",
+  Kamera: "category-camera",
+  Furnitur: "category-furniture",
+  Fashion: "category-fashion",
+  Hobi: "category-hobby",
+  Kendaraan: "category-vehicle"
+};
+
 export default function HomePage() {
   const featuredProducts = products.slice(0, 3);
   const heroProduct = products[0];
@@ -72,11 +81,8 @@ export default function HomePage() {
                 <p>{formatPrice(heroProduct.price)}</p>
               </div>
               <div className="hero-actions" data-test-id="home-hero-actions">
-                <Link className="button" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
+                <Link className="button glow" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
                   Lihat Detail
-                </Link>
-                <Link className="button secondary light" href="/search" data-test-id="home-browse-products">
-                  Lihat Semua
                 </Link>
               </div>
             </div>
@@ -86,7 +92,6 @@ export default function HomePage() {
 
       <section className="category-strip" aria-label="Kategori populer" data-test-id="home-category-strip">
         <div className="container category-inner">
-          <span>Mulai dari</span>
           {categories.map((category) => (
             <Link
               key={category}
@@ -94,6 +99,9 @@ export default function HomePage() {
               className="category-chip"
               data-test-id={`home-category-${category.toLowerCase()}`}
             >
+              <svg className="category-chip-icon" aria-hidden="true">
+                <use href={`/category-sprite.svg#${categoryIconIds[category] || "category-default"}`} />
+              </svg>
               {category}
             </Link>
           ))}
