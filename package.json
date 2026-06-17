@@ -4,8 +4,9 @@
   "private": true,
   "packageManager": "yarn@1.22.19",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/next-safe-run.mjs dev",
+    "build": "node scripts/next-safe-run.mjs build",
+    "clean": "rm -rf .next",
     "start": "next start",
     "lint": "next lint"
   },

@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pojok Seken">
+  <rect x="6" y="6" width="52" height="52" rx="13" fill="#05A66B"/>
+  <g filter="url(#shadow)">
+    <path d="M23.9 30.3H40.1L41.6 46.8H22.4L23.9 30.3Z" stroke="white" stroke-width="3.2" stroke-linejoin="round"/>
+    <path d="M27.8 30V26.2C27.8 23.9 29.7 22 32 22C34.3 22 36.2 23.9 36.2 26.2V30" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <filter id="shadow" x="14" y="14" width="36" height="40" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#006641" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+</svg>

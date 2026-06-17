@@ -14,6 +14,14 @@ export type Product = {
   highlights: string[];
 };
 
+export type SellerProfile = {
+  name: string;
+  slug: string;
+  location: string;
+  initials: string;
+  products: Product[];
+};
+
 type SearchProductsParams = {
   q?: string;
   category?: string;
@@ -173,6 +181,45 @@ export function formatPrice(price: number) {
 
 export function getProductBySlug(slug: string) {
   return products.find((product) => product.slug === slug);
+}
+
+export function slugifySeller(name: string) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getSellerInitials(name: string) {
+  return name
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+export function getSellerProfiles(): SellerProfile[] {
+  const sellerMap = new Map<string, Product[]>();
+
+  products.forEach((product) => {
+    const sellerProducts = sellerMap.get(product.seller) || [];
+    sellerProducts.push(product);
+    sellerMap.set(product.seller, sellerProducts);
+  });
+
+  return Array.from(sellerMap.entries()).map(([name, sellerProducts]) => ({
+    name,
+    slug: slugifySeller(name),
+    location: sellerProducts[0]?.location || siteConfig.city,
+    initials: getSellerInitials(name),
+    products: sellerProducts
+  }));
+}
+
+export function getSellerBySlug(slug: string) {
+  return getSellerProfiles().find((seller) => seller.slug === slug);
 }
 
 export function searchProducts({

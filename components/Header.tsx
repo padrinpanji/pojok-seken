@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { SearchIcon } from "@/components/Icons";
 
 export default function Header() {
   return (
@@ -10,13 +9,12 @@ export default function Header() {
           <Image src="/logo-pojok-seken.svg" alt="PojokSeken" width={252} height={64} priority />
         </Link>
         <div className="nav-links">
-          <Link href="/search">Cari Barang</Link>
-          <Link href="/about">Tentang</Link>
+          <Link href="/search">Cari Produk</Link>
+          <Link href="/users">Cari Penjual</Link>
           <Link href="/contact">Kontak</Link>
-          <Link href="/terms-and-conditions">Syarat</Link>
-          <Link className="button" href="/search" aria-label="Cari barang bekas di Pojok Seken">
-            <SearchIcon />
-            Cari
+          <Link href="/about">Tentang</Link>
+          <Link className="button" href="/login" aria-label="Login atau register akun Pojok Seken">
+            Masuk / Daftar
           </Link>
         </div>
       </nav>

@@ -24,6 +24,16 @@ export const metadata: Metadata = {
   authors: [{ name: siteConfig.name }],
   creator: siteConfig.name,
   publisher: siteConfig.name,
+  icons: {
+    icon: [
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml"
+      }
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg"
+  },
   alternates: {
     canonical: "/"
   },

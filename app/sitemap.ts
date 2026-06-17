@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
-import { products, siteConfig } from "@/data/products";
+import { getSellerProfiles, products, siteConfig } from "@/data/products";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   const staticRoutes = [
     { route: "", priority: 1 },
     { route: "/search", priority: 0.9 },
+    { route: "/users", priority: 0.85 },
+    { route: "/login", priority: 0.75 },
     { route: "/about", priority: 0.8 },
     { route: "/contact", priority: 0.8 },
     { route: "/about-contact", priority: 0.7 },
@@ -26,5 +28,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.9
   }));
 
-  return [...staticRoutes, ...productRoutes];
+  const sellerRoutes = getSellerProfiles().map((seller) => ({
+    url: `${siteConfig.url}/users/${seller.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.8
+  }));
+
+  return [...staticRoutes, ...productRoutes, ...sellerRoutes];
 }

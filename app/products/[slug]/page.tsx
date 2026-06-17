@@ -6,7 +6,7 @@ import ShareListing from "@/components/ShareListing";
 import SchemaScript from "@/components/SchemaScript";
 import ProductCard from "@/components/ProductCard";
 import { CalendarIcon, ChatIcon, PinIcon, ShieldIcon, WhatsAppIcon } from "@/components/Icons";
-import { formatPrice, getProductBySlug, products, siteConfig } from "@/data/products";
+import { formatPrice, getProductBySlug, products, siteConfig, slugifySeller } from "@/data/products";
 
 type ProductPageProps = {
   params: Promise<{
@@ -73,6 +73,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const sellerSlug = slugifySeller(product.seller);
   const whatsappMessage = encodeURIComponent(
     `Halo, saya tertarik dengan ${product.name} di Pojok Seken. Apakah masih tersedia?`
   );
@@ -213,26 +214,22 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                   <span />
                 </div>
                 <div>
-                  <h2>{product.seller}</h2>
+                  <h2>
+                    <Link href={`/users/${sellerSlug}`} data-test-id="product-seller-profile-link">
+                      {product.seller}
+                    </Link>
+                  </h2>
                   <p>Bergabung sejak Maret 2022 - {product.location}</p>
                   <div className="seller-rating" aria-label="Rating penjual 5 dari 5" data-test-id="product-seller-rating">
                     <span aria-hidden="true">★★★★★</span>
-                    <strong>(48 ulasan)</strong>
+                    <strong>5.0</strong>
                   </div>
                 </div>
               </div>
               <div className="seller-metrics" data-test-id="product-seller-metrics">
-                <div data-test-id="product-seller-chat-rate">
-                  <span>Balas chat</span>
-                  <strong>100%</strong>
-                </div>
                 <div data-test-id="product-seller-sold-count">
                   <span>Produk terjual</span>
                   <strong>34 Unit</strong>
-                </div>
-                <div data-test-id="product-seller-response-time">
-                  <span>Waktu respon</span>
-                  <strong>&lt; 15 Mnt</strong>
                 </div>
               </div>
             </section>
