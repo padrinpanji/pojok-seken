@@ -71,13 +71,14 @@ img {
 }
 
 .brand {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
-.brand span {
-  color: var(--green);
+.brand img {
+  width: 189px;
+  height: auto;
 }
 
 .nav-links {

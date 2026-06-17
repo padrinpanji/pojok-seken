@@ -1,12 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SearchIcon } from "@/components/Icons";
 
 export default function Header() {
   return (
     <header className="site-header">
       <nav className="nav" aria-label="Navigasi utama">
-        <Link className="brand" href="/">
-          Pojok <span>Seken</span>
+        <Link className="brand" href="/" aria-label="PojokSeken beranda" data-test-id="header-logo-link">
+          <Image src="/logo-pojok-seken.svg" alt="PojokSeken" width={252} height={64} priority />
         </Link>
         <div className="nav-links">
           <Link href="/search">Cari Barang</Link>
