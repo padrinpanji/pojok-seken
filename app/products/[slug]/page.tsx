@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ProductGallery from "@/components/ProductGallery";
+import ShareListing from "@/components/ShareListing";
 import SchemaScript from "@/components/SchemaScript";
 import ProductCard from "@/components/ProductCard";
+import { CalendarIcon, ChatIcon, PinIcon, ShieldIcon, WhatsAppIcon } from "@/components/Icons";
 import { formatPrice, getProductBySlug, products, siteConfig } from "@/data/products";
 
 type ProductPageProps = {
@@ -57,9 +60,30 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const relatedProducts = products
-    .filter((item) => item.category === product.category && item.slug !== product.slug)
-    .slice(0, 3);
+  const sameCategoryProducts = products.filter(
+    (item) => item.category === product.category && item.slug !== product.slug
+  );
+  const fallbackProducts = products.filter(
+    (item) => item.category !== product.category && item.slug !== product.slug
+  );
+  const relatedProducts = [...sameCategoryProducts, ...fallbackProducts].slice(0, 4);
+  const sellerInitials = product.seller
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const whatsappMessage = encodeURIComponent(
+    `Halo, saya tertarik dengan ${product.name} di Pojok Seken. Apakah masih tersedia?`
+  );
+  const technicalSpecs = [
+    ["Kategori", product.category],
+    ["Kondisi", product.condition],
+    ["Tahun", product.year],
+    ["Lokasi", product.location],
+    ["Penjual", product.seller],
+    ["Kelengkapan", product.highlights.join(", ")]
+  ];
 
   const productSchema = {
     "@context": "https://schema.org",
@@ -89,65 +113,205 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   return (
     <>
       <SchemaScript data={productSchema} />
-      <section className="section">
-        <div className="container detail-layout">
-          <div className="gallery">
-            {product.gallery.map((image) => (
-              <img key={image} src={image} alt={`${product.name} - foto produk`} />
-            ))}
+      <section className="detail-topbar" data-test-id="product-breadcrumbs">
+        <div className="container detail-topbar-inner">
+          <div className="breadcrumb">
+            <Link href="/" data-test-id="product-breadcrumb-home">
+              Beranda
+            </Link>
+            <span>/</span>
+            <Link
+              href={`/search?category=${encodeURIComponent(product.category)}`}
+              data-test-id="product-breadcrumb-category"
+            >
+              {product.category}
+            </Link>
+            <span>/</span>
+            <span>{product.name}</span>
+          </div>
+          <div className="detail-utility" data-test-id="product-utility-actions">
+            <ShareListing productName={product.name} slug={product.slug} />
+          </div>
+        </div>
+      </section>
+
+      <main className="detail-page section" data-test-id="product-detail-page">
+        <div className="container detail-shell">
+          <div className="detail-gallery-stack">
+            <section className="detail-gallery-card" data-test-id="product-gallery">
+              <ProductGallery
+                images={product.gallery}
+                fallbackImage={product.image}
+                productName={product.name}
+              />
+              <div className="gallery-caption">
+                <span>{product.name} - foto produk detail</span>
+                <span>Diupload: 1 hari lalu</span>
+              </div>
+            </section>
+
+            <section className="safety-guide" data-test-id="product-safety-guide">
+              <span className="safety-guide-icon" aria-hidden="true">
+                <ShieldIcon />
+              </span>
+              <div>
+                <strong>Panduan Aman Berbelanja Second-Hand</strong>
+                <p>
+                  Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, memeriksa material kain,
+                  kekuatan engsel/kaki sofa secara langsung, dan tawar-menawar secara aman bersama
+                  penjual sebelum mentransfer dana apa pun.
+                </p>
+              </div>
+            </section>
           </div>
 
-          <aside className="detail-panel" aria-label="Ringkasan produk">
-            <p className="eyebrow">{product.category}</p>
-            <h1>{product.name}</h1>
-            <div className="price">{formatPrice(product.price)}</div>
-            <div className="badge-row">
-              <span className="badge">{product.condition}</span>
-              <span className="badge">{product.location}</span>
-              <span className="badge">Tahun {product.year}</span>
-            </div>
-            <p>{product.description}</p>
-            <Link className="button" href="/contact">
-              Hubungi Penjual
-            </Link>
+          <aside className="detail-summary-stack" aria-label="Ringkasan produk">
+            <section className="detail-panel premium" data-test-id="product-summary-panel">
+              <p className="detail-category-pill" data-test-id="product-category-pill">
+                {product.category}
+              </p>
+              <h1>{product.name}</h1>
+              <div className="price">{formatPrice(product.price)}</div>
+              <div className="detail-meta-row" data-test-id="product-meta-badges">
+                <span className="detail-meta-pill condition">
+                  <span className="status-dot" />
+                  {product.condition}
+                </span>
+                <span className="detail-meta-pill">
+                  <PinIcon />
+                  {product.location}
+                </span>
+                <span className="detail-meta-pill">
+                  <CalendarIcon />
+                  Tahun {product.year}
+                </span>
+              </div>
+              <div className="detail-actions">
+                <a
+                  className="button"
+                  href={`https://wa.me/628123456789?text=${whatsappMessage}`}
+                  data-test-id="product-whatsapp-link"
+                >
+                  <WhatsAppIcon />
+                  Hubungi Penjual (WhatsApp)
+                </a>
+                <Link className="button secondary" href="/contact" data-test-id="product-chat-link">
+                  <ChatIcon />
+                  Kirim Chat Langsung (Live Chat)
+                </Link>
+              </div>
+            </section>
 
-            <div className="seller-box">
-              <strong>Penjual</strong>
-              <p>{product.seller}</p>
-            </div>
+            <section className="seller-card" data-test-id="product-seller-card">
+              <div className="seller-card-head">
+                <p>Informasi akun penjual</p>
+                <span>Toko terverifikasi</span>
+              </div>
+              <div className="seller-profile">
+                <div className="seller-avatar" aria-hidden="true">
+                  {sellerInitials}
+                  <span />
+                </div>
+                <div>
+                  <h2>{product.seller}</h2>
+                  <p>Bergabung sejak Maret 2022 - {product.location}</p>
+                  <div className="seller-rating" aria-label="Rating penjual 5 dari 5" data-test-id="product-seller-rating">
+                    <span aria-hidden="true">★★★★★</span>
+                    <strong>(48 ulasan)</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="seller-metrics" data-test-id="product-seller-metrics">
+                <div data-test-id="product-seller-chat-rate">
+                  <span>Balas chat</span>
+                  <strong>100%</strong>
+                </div>
+                <div data-test-id="product-seller-sold-count">
+                  <span>Produk terjual</span>
+                  <strong>34 Unit</strong>
+                </div>
+                <div data-test-id="product-seller-response-time">
+                  <span>Waktu respon</span>
+                  <strong>&lt; 15 Mnt</strong>
+                </div>
+              </div>
+            </section>
           </aside>
         </div>
-      </section>
 
-      <section className="section alt">
-        <div className="container">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Detail barang</p>
-              <h2>Informasi utama sebelum cek unit</h2>
-            </div>
-          </div>
-          <div className="spec-list">
-            {product.highlights.map((highlight) => (
-              <div className="spec" key={highlight}>
-                <strong>{highlight}</strong>
-                <span>Sudah dicatat oleh penjual untuk membantu perbandingan.</span>
+        <div className="container detail-content-grid">
+          <div className="detail-content-main">
+            <section className="detail-description" data-test-id="product-description">
+              <p className="eyebrow">Detail produk</p>
+              <h2>Informasi lengkap dari penjual</h2>
+              <p className="detail-intro">
+                Dijual unit {product.name} tahun {product.year}. {product.description}
+              </p>
+              <h3>Mengapa {product.name} ini layak dipertimbangkan?</h3>
+              <ul className="detail-copy-list">
+                {product.highlights.map((highlight) => (
+                  <li key={highlight}>
+                    <b>{highlight}</b> sudah dicatat penjual sebagai poin utama untuk membantu Anda
+                    membandingkan kondisi barang sebelum cek unit.
+                  </li>
+                ))}
+              </ul>
+              <div className="condition-note">
+                <strong>Catatan Kondisi Fisik:</strong>
+                <p>
+                  Mohon cek kembali foto, kelengkapan, dan fungsi utama barang saat COD. Jika ada
+                  detail tambahan, tanyakan langsung kepada {product.seller} sebelum melakukan pembayaran.
+                </p>
               </div>
-            ))}
+            </section>
+
+            <section className="detail-specification" data-test-id="product-specification">
+              <p className="eyebrow">Tabel spesifikasi</p>
+              <h2>Spesifikasi teknis lengkap</h2>
+              <div className="spec-table">
+                {technicalSpecs.map(([label, value]) => (
+                  <div className="spec-table-row" key={label}>
+                    <strong>{label}</strong>
+                    <span>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
+
+          <aside className="detail-content-side" aria-label="FAQ produk">
+            <section className="detail-faq" data-test-id="product-faq">
+              <p className="eyebrow">Tanya jawab (FAQ)</p>
+              <details>
+                <summary>Apakah barang bisa dicek langsung?</summary>
+                <p>Bisa. Gunakan COD agar Anda dapat memeriksa kondisi barang sebelum membayar.</p>
+              </details>
+              <details>
+                <summary>Bisa kirim luar kota atau hanya COD?</summary>
+                <p>Utamakan COD. Jika perlu pengiriman, sepakati detail dan bukti transaksi dengan penjual.</p>
+              </details>
+            </section>
+          </aside>
         </div>
-      </section>
+      </main>
 
       {relatedProducts.length > 0 && (
-        <section className="section">
+        <section className="section product-related-section">
           <div className="container">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Produk serupa</p>
                 <h2>Masih dalam kategori {product.category}</h2>
               </div>
+              <Link
+                className="button secondary"
+                href={`/search?category=${encodeURIComponent(product.category)}`}
+                data-test-id="product-related-view-all"
+              >
+                Lihat semua
+              </Link>
             </div>
-            <div className="grid">
+            <div className="grid product-related-grid" data-test-id="product-related-grid">
               {relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} />
               ))}
