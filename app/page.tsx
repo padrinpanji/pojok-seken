@@ -32,37 +32,53 @@ export default function HomePage() {
               Jelajahi elektronik, kamera, furnitur, sepeda, dan kebutuhan harian
               dari penjual lokal dengan detail kondisi yang jelas.
             </p>
+            <form className="search-bar hero-search" action="/search" data-test-id="home-search-form">
+              <SearchIcon className="hero-search-icon" />
+              <input
+                type="search"
+                name="q"
+                placeholder="Cari laptop, kamera, sofa, sepeda..."
+                aria-label="Cari barang bekas"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-test-id="home-search-input"
+              />
+              <button className="button" type="submit" data-test-id="home-search-submit">
+                Cari Sekarang
+                <span aria-hidden="true">→</span>
+              </button>
+            </form>
+            <div className="hero-proof" aria-label="Ringkasan marketplace Pojok Seken">
+              <span>{products.length}+ listing aktif</span>
+              <span>{categories.length} kategori populer</span>
+              <span>Penjual lokal terverifikasi</span>
+            </div>
           </div>
 
-          <form className="search-bar hero-search" action="/search" data-test-id="home-search-form">
-            <input
-              type="search"
-              name="q"
-              placeholder="Cari laptop, kamera, sofa, sepeda..."
-              aria-label="Cari barang bekas"
-              data-test-id="home-search-input"
-            />
-            <button className="button" type="submit" data-test-id="home-search-submit">
-              <SearchIcon />
-              Cari
-            </button>
-          </form>
-
-          <div className="hero-actions" data-test-id="home-hero-actions">
-            <Link className="button" href="/search" data-test-id="home-browse-products">
-              Lihat barang pilihan
-            </Link>
-            <Link className="button secondary light" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
-              Cek produk utama
-            </Link>
-          </div>
-
-          <div className="hero-product" data-test-id="home-highlight-product">
-            <img src={heroProduct.image} alt={`${heroProduct.name} di ${heroProduct.location}`} />
-            <div>
-              <span>{heroProduct.condition}</span>
-              <strong>{heroProduct.name}</strong>
-              <p>{formatPrice(heroProduct.price)} - {heroProduct.location}</p>
+          <div className="hero-panel" aria-label="Produk utama minggu ini">
+            <span className="hero-panel-label">Produk utama minggu ini</span>
+            <div className="hero-product" data-test-id="home-highlight-product">
+              <div className="hero-product-media">
+                <img src={heroProduct.image} alt={`${heroProduct.name} di ${heroProduct.location}`} />
+                <span>{heroProduct.condition}</span>
+              </div>
+              <div className="hero-product-body">
+                <div className="hero-product-meta">
+                  <span>{heroProduct.condition}</span>
+                  <span>{heroProduct.location}</span>
+                </div>
+                <strong>{heroProduct.name}</strong>
+                <p>{formatPrice(heroProduct.price)}</p>
+              </div>
+              <div className="hero-actions" data-test-id="home-hero-actions">
+                <Link className="button" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
+                  Lihat Detail
+                </Link>
+                <Link className="button secondary light" href="/search" data-test-id="home-browse-products">
+                  Lihat Semua
+                </Link>
+              </div>
             </div>
           </div>
         </div>

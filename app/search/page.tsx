@@ -192,6 +192,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   placeholder="Cari nama barang, kategori, lokasi..."
                   defaultValue={q}
                   aria-label="Kata kunci pencarian"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   data-test-id="search-keyword-input"
                 />
               </div>

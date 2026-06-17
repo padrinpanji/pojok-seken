@@ -78,6 +78,9 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 defaultValue={q}
                 placeholder="Cari nama penjual"
                 aria-label="Cari penjual"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 data-test-id="users-search-input"
               />
             </div>

@@ -173,6 +173,9 @@ export default async function UserProfilePage({ params, searchParams }: UserProf
                 defaultValue={q}
                 placeholder={`Cari produk dari ${seller.name}`}
                 aria-label={`Cari produk dari ${seller.name}`}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 data-test-id="seller-product-search-input"
               />
             </div>
