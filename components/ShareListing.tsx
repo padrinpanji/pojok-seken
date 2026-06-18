@@ -15,6 +15,8 @@ const shareChannels = [
   { label: "Telegram", source: "telegram", Icon: TelegramIcon }
 ];
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://pojok-seken.vercel.app").replace(/\/$/, "");
+
 function buildShareUrl(source: string, slug: string, baseUrl: string) {
   const url = new URL(baseUrl);
 
@@ -29,7 +31,7 @@ function buildShareUrl(source: string, slug: string, baseUrl: string) {
 export default function ShareListing({ productName, slug }: ShareListingProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("Salin link");
-  const [baseUrl, setBaseUrl] = useState(`https://pojokseken.example.com/products/${slug}`);
+  const [baseUrl, setBaseUrl] = useState(`${siteUrl}/products/${slug}`);
   const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

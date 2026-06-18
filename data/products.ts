@@ -28,9 +28,13 @@ type SearchProductsParams = {
   condition?: string;
 };
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://pojok-seken.vercel.app");
+
 export const siteConfig = {
   name: "Pojok Seken",
-  url: "https://pojokseken.example.com",
+  url: siteUrl.replace(/\/$/, ""),
   description:
     "Pojok Seken adalah marketplace barang bekas berkualitas untuk laptop, kamera, furnitur, sepeda, dan kebutuhan rumah tangga pilihan.",
   city: "Jakarta",
