@@ -13,7 +13,7 @@ export default function Header() {
           <Link href="/users">Cari Penjual</Link>
           <Link href="/contact">Kontak</Link>
           <Link href="/about">Tentang</Link>
-          <Link className="button" href="/login" aria-label="Login atau register akun Pojok Seken">
+          <Link className="button" href="/auth" aria-label="Login atau register akun Pojok Seken">
             Masuk / Daftar
           </Link>
         </div>
