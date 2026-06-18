@@ -119,15 +119,6 @@ export default function AuthPage() {
                   </div>
                 ))}
               </div>
-
-              <div className="auth-community">
-                <div className="auth-avatars" aria-hidden="true">
-                  <span>U1</span>
-                  <span>U2</span>
-                  <span>U3</span>
-                </div>
-                <p>Bergabung dengan +12,400 pengguna lainnya</p>
-              </div>
             </aside>
 
             <div className="auth-panel">
