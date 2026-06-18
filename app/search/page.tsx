@@ -3,7 +3,7 @@ import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import SchemaScript from "@/components/SchemaScript";
 import { MapIcon, SearchIcon, ShieldIcon } from "@/components/Icons";
-import { categories, formatPrice, products, siteConfig, type Product } from "@/data/products";
+import { formatPrice, getCategories, getProducts, siteConfig, type Product } from "@/data/products";
 
 export const metadata: Metadata = {
   title: "Search Barang Bekas",
@@ -35,7 +35,8 @@ function filterProducts({
   minPrice,
   maxPrice,
   minYear,
-  verified
+  verified,
+  productList
 }: {
   q: string;
   category: string;
@@ -45,12 +46,13 @@ function filterProducts({
   maxPrice?: number;
   minYear: string;
   verified: boolean;
+  productList: Product[];
 }) {
   const normalizedQuery = q.toLowerCase().trim();
   const normalizedLocation = location.toLowerCase().trim();
   const minimumYear = Number(minYear);
 
-  return products.filter((product) => {
+  return productList.filter((product) => {
     const matchesQuery =
       !normalizedQuery ||
       [product.name, product.category, product.location, product.description]
@@ -99,6 +101,8 @@ function sortProducts(productsToSort: Product[], sort: string) {
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
+  const categories = await getCategories();
+  const productList = await getProducts();
   const q = getSingleParam(params?.q);
   const category = getSingleParam(params?.category);
   const condition = getSingleParam(params?.condition);
@@ -116,11 +120,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     minPrice,
     maxPrice,
     minYear,
-    verified
+    verified,
+    productList
   });
   const results = sortProducts(filteredProducts, sort);
-  const conditions = [...new Set(products.map((product) => product.condition))];
-  const locations = [...new Set(products.map((product) => product.location))];
+  const conditions = [...new Set(productList.map((product) => product.condition))];
+  const locations = [...new Set(productList.map((product) => product.location))];
+  const minimumProductPrice = productList.length
+    ? Math.min(...productList.map((product) => product.price))
+    : 0;
   const activeFilterCount = [
     q,
     category,
@@ -153,7 +161,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           </div>
           <div className="active-count" data-test-id="search-active-count">
             <span />
-            <strong>{products.length}</strong> iklan aktif hari ini
+            <strong>{productList.length}</strong> iklan aktif hari ini
           </div>
         </div>
       </section>
@@ -379,7 +387,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               tahun, harga, serta detail penjual sebelum melanjutkan transaksi.
             </p>
             <div className="info-stats">
-              <span>{formatPrice(Math.min(...products.map((product) => product.price)))} harga mulai</span>
+              <span>{formatPrice(minimumProductPrice)} harga mulai</span>
               <span>{categories.length} kategori</span>
               <span>{locations.length} lokasi</span>
             </div>

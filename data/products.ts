@@ -1,3 +1,6 @@
+import { cache } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
+
 export type Product = {
   id: number;
   slug: string;
@@ -28,6 +31,26 @@ type SearchProductsParams = {
   condition?: string;
 };
 
+type SupabaseCategoryRow = {
+  name: string | null;
+};
+
+type SupabaseProductRow = {
+  id: number | string | null;
+  slug: string | null;
+  name: string | null;
+  category: string | null;
+  condition: string | null;
+  price: number | string | null;
+  location: string | null;
+  image: string | null;
+  gallery: string[] | string | null;
+  year: string | number | null;
+  seller: string | null;
+  description: string | null;
+  highlights: string[] | string | null;
+};
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://pojok-seken.vercel.app");
@@ -43,148 +66,12 @@ export const siteConfig = {
   email: "halo@pojokseken.id"
 };
 
-export const categories = [
-  "Elektronik",
-  "Kamera",
-  "Furnitur",
-  "Fashion",
-  "Hobi",
-  "Kendaraan"
-];
-
-export const products: Product[] = [
-  {
-    id: 1,
-    slug: "macbook-air-m1-2020-mulus",
-    name: "MacBook Air M1 2020 Mulus",
-    category: "Elektronik",
-    condition: "Bekas Like New",
-    price: 9200000,
-    location: "Jakarta Selatan",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2020",
-    seller: "Raka Gadget",
-    description:
-      "MacBook Air M1 RAM 8GB SSD 256GB, baterai sehat, bodi mulus, siap pakai untuk kerja harian, kuliah, dan editing ringan.",
-    highlights: ["RAM 8GB", "SSD 256GB", "Baterai sehat", "Fullset charger"]
-  },
-  {
-    id: 2,
-    slug: "sony-a6400-kit-lens-16-50mm",
-    name: "Sony A6400 Kit Lens 16-50mm",
-    category: "Kamera",
-    condition: "Bekas Terawat",
-    price: 10800000,
-    location: "Bandung",
-    image:
-      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2019",
-    seller: "Nara Kamera",
-    description:
-      "Kamera mirrorless Sony A6400 lengkap dengan kit lens, cocok untuk konten, travel, dan foto produk. Sensor bersih dan autofocus normal.",
-    highlights: ["Shutter rendah", "Kit lens", "Tas kamera", "Baterai cadangan"]
-  },
-  {
-    id: 3,
-    slug: "sofa-minimalis-abu-3-seater",
-    name: "Sofa Minimalis Abu 3 Seater",
-    category: "Furnitur",
-    condition: "Bekas Bagus",
-    price: 1850000,
-    location: "Tangerang",
-    image:
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1493663284031-b7e3aaa4cab7?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2023",
-    seller: "Rumah Rapi",
-    description:
-      "Sofa kain abu ukuran 3 seater, busa masih empuk, rangka kokoh, cocok untuk ruang tamu apartemen atau rumah minimalis.",
-    highlights: ["3 seater", "Busa empuk", "Rangka kuat", "Siap angkut"]
-  },
-  {
-    id: 4,
-    slug: "sepeda-lipat-20-inch-urban",
-    name: "Sepeda Lipat 20 Inch Urban",
-    category: "Hobi",
-    condition: "Bekas Siap Pakai",
-    price: 2100000,
-    location: "Depok",
-    image:
-      "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2022",
-    seller: "Gowes Corner",
-    description:
-      "Sepeda lipat 20 inch untuk komuter kota, ringan, rem pakem, gear normal, dan mudah masuk bagasi mobil.",
-    highlights: ["20 inch", "Frame ringan", "Rem normal", "Ban tebal"]
-  },
-  {
-    id: 5,
-    slug: "kursi-kerja-ergonomis-hitam",
-    name: "Kursi Kerja Ergonomis Hitam",
-    category: "Furnitur",
-    condition: "Bekas Terawat",
-    price: 975000,
-    location: "Bekasi",
-    image:
-      "https://images.unsplash.com/photo-1505843490701-5be5d8b5a1f1?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1505843490701-5be5d8b5a1f1?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2021",
-    seller: "Office Seken",
-    description:
-      "Kursi kerja ergonomis dengan sandaran mesh, armrest, dan hidrolik normal. Nyaman untuk WFH panjang.",
-    highlights: ["Mesh back", "Hidrolik normal", "Armrest", "Roda lancar"]
-  },
-  {
-    id: 6,
-    slug: "iphone-13-128gb-midnight",
-    name: "iPhone 13 128GB Midnight",
-    category: "Elektronik",
-    condition: "Bekas Mulus",
-    price: 7600000,
-    location: "Jakarta Barat",
-    image:
-      "https://images.unsplash.com/photo-1632633173522-45589163466f?auto=format&fit=crop&w=1200&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1632633173522-45589163466f?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1200&q=80"
-    ],
-    year: "2021",
-    seller: "Biru Phone",
-    description:
-      "iPhone 13 128GB warna Midnight, Face ID normal, kamera jernih, iCloud aman, cocok untuk upgrade harian.",
-    highlights: ["128GB", "Face ID normal", "Kamera jernih", "iCloud aman"]
-  }
-];
-
 export function formatPrice(price: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0
   }).format(price);
-}
-
-export function getProductBySlug(slug: string) {
-  return products.find((product) => product.slug === slug);
 }
 
 export function slugifySeller(name: string) {
@@ -204,10 +91,104 @@ function getSellerInitials(name: string) {
     .toUpperCase();
 }
 
-export function getSellerProfiles(): SellerProfile[] {
+function parseTextList(value: string[] | string | null, fallback: string[]) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (!value) {
+    return fallback;
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(value);
+
+    if (Array.isArray(parsedValue)) {
+      return parsedValue.filter((item): item is string => typeof item === "string" && Boolean(item));
+    }
+  } catch {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return fallback;
+}
+
+function mapSupabaseProduct(row: SupabaseProductRow): Product | null {
+  if (!row.slug || !row.name || !row.category || !row.condition || !row.location || !row.seller) {
+    return null;
+  }
+
+  const price = Number(row.price);
+
+  return {
+    id: Number(row.id) || 0,
+    slug: row.slug,
+    name: row.name,
+    category: row.category,
+    condition: row.condition,
+    price: Number.isFinite(price) ? price : 0,
+    location: row.location,
+    image: row.image || "/logo-pojok-seken.svg",
+    gallery: parseTextList(row.gallery, row.image ? [row.image] : ["/logo-pojok-seken.svg"]),
+    year: String(row.year || ""),
+    seller: row.seller,
+    description: row.description || "",
+    highlights: parseTextList(row.highlights, [])
+  };
+}
+
+export const getCategories = cache(async (): Promise<string[]> => {
+  const supabase = createSupabaseClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase.from("categories").select("name").order("id", { ascending: true });
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  return (data as SupabaseCategoryRow[])
+    .map((category) => category.name)
+    .filter((name): name is string => Boolean(name));
+});
+
+export const getProducts = cache(async (): Promise<Product[]> => {
+  const supabase = createSupabaseClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights")
+    .order("id", { ascending: true });
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  return (data as SupabaseProductRow[])
+    .map(mapSupabaseProduct)
+    .filter((product): product is Product => Boolean(product));
+});
+
+export async function getProductBySlug(slug: string) {
+  const productList = await getProducts();
+
+  return productList.find((product) => product.slug === slug);
+}
+
+export function getSellerProfilesFromProducts(productList: Product[]): SellerProfile[] {
   const sellerMap = new Map<string, Product[]>();
 
-  products.forEach((product) => {
+  productList.forEach((product) => {
     const sellerProducts = sellerMap.get(product.seller) || [];
     sellerProducts.push(product);
     sellerMap.set(product.seller, sellerProducts);
@@ -222,18 +203,27 @@ export function getSellerProfiles(): SellerProfile[] {
   }));
 }
 
-export function getSellerBySlug(slug: string) {
-  return getSellerProfiles().find((seller) => seller.slug === slug);
+export async function getSellerProfiles() {
+  const productList = await getProducts();
+
+  return getSellerProfilesFromProducts(productList);
 }
 
-export function searchProducts({
+export async function getSellerBySlug(slug: string) {
+  const sellers = await getSellerProfiles();
+
+  return sellers.find((seller) => seller.slug === slug);
+}
+
+export async function searchProducts({
   q = "",
   category = "",
   condition = ""
 }: SearchProductsParams = {}) {
+  const productList = await getProducts();
   const normalizedQuery = q.toLowerCase().trim();
 
-  return products.filter((product) => {
+  return productList.filter((product) => {
     const matchesQuery =
       !normalizedQuery ||
       [product.name, product.category, product.location, product.description]

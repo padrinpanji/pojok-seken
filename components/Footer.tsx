@@ -48,7 +48,7 @@ export default function Footer() {
             <h2>Hubungi Kami</h2>
             <p>Punya pertanyaan seputar cara pasang iklan?</p>
             <a href={`mailto:${siteConfig.email}`} data-test-id="footer-email-link">
-              support@pojokseken.id
+              info.pojokseken@gmail.com
             </a>
           </section>
         </div>

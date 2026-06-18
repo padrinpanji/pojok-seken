@@ -25,7 +25,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   const params = await searchParams;
   const q = getSingleParam(params?.q);
   const normalizedQuery = q.toLowerCase().trim();
-  const sellers = getSellerProfiles();
+  const sellers = await getSellerProfiles();
   const results = sellers.filter((seller) => {
     if (!normalizedQuery) {
       return true;

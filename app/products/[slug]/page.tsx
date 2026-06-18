@@ -6,7 +6,7 @@ import ShareListing from "@/components/ShareListing";
 import SchemaScript from "@/components/SchemaScript";
 import ProductCard from "@/components/ProductCard";
 import { CalendarIcon, ChatIcon, PinIcon, ShieldIcon, WhatsAppIcon } from "@/components/Icons";
-import { formatPrice, getProductBySlug, products, siteConfig, slugifySeller } from "@/data/products";
+import { formatPrice, getProductBySlug, getProducts, siteConfig, slugifySeller } from "@/data/products";
 
 type ProductPageProps = {
   params: Promise<{
@@ -14,15 +14,17 @@ type ProductPageProps = {
   }>;
 };
 
-export function generateStaticParams() {
-  return products.map((product) => ({
+export async function generateStaticParams() {
+  const productList = await getProducts();
+
+  return productList.map((product) => ({
     slug: product.slug
   }));
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return {
@@ -54,16 +56,17 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
   }
 
-  const sameCategoryProducts = products.filter(
+  const productList = await getProducts();
+  const sameCategoryProducts = productList.filter(
     (item) => item.category === product.category && item.slug !== product.slug
   );
-  const fallbackProducts = products.filter(
+  const fallbackProducts = productList.filter(
     (item) => item.category !== product.category && item.slug !== product.slug
   );
   const relatedProducts = [...sameCategoryProducts, ...fallbackProducts].slice(0, 4);
