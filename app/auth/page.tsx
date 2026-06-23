@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import SchemaScript from "@/components/SchemaScript";
+import { loginSuperadmin } from "@/app/auth/actions";
 import { siteConfig } from "@/data/products";
+import { hasSuperadminSession } from "@/lib/superadmin-auth";
 
 export const metadata: Metadata = {
   title: "Login atau Register Akun",
@@ -68,7 +71,19 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
-export default function AuthPage() {
+type AuthPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function AuthPage({ searchParams }: AuthPageProps) {
+  if (await hasSuperadminSession()) {
+    redirect("/admin");
+  }
+
+  const params = await searchParams;
+  const hasInvalidLogin = params?.error === "invalid";
   const authSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -135,15 +150,15 @@ export default function AuthPage() {
               </div>
 
               <div className="auth-form-stage">
-                <form className="auth-form auth-login-form">
+                <form className="auth-form auth-login-form" action={loginSuperadmin}>
                   <div className="auth-form-head">
                     <h2>Selamat datang kembali!</h2>
                     <p>Silakan masuk dengan kredensial terdaftar Anda.</p>
                   </div>
 
                   <label className="auth-field">
-                    <span>Alamat Email atau WhatsApp</span>
-                    <input type="text" name="loginEmail" placeholder="contoh@email.com / 0812345..." required />
+                    <span>Username</span>
+                    <input type="text" name="loginEmail" placeholder="admin" autoComplete="username" required />
                   </label>
 
                   <label className="auth-field">
@@ -151,8 +166,14 @@ export default function AuthPage() {
                       Kata Sandi
                       <Link href="/auth">Lupa Kata Sandi?</Link>
                     </span>
-                    <input type="password" name="loginPassword" placeholder="Masukkan kata sandi Anda" required />
+                    <input type="password" name="loginPassword" placeholder="Masukkan kata sandi Anda" autoComplete="current-password" required />
                   </label>
+
+                  {hasInvalidLogin ? (
+                    <p className="auth-error" role="alert">
+                      Username atau kata sandi tidak sesuai.
+                    </p>
+                  ) : null}
 
                   <label className="auth-check">
                     <input type="checkbox" name="rememberMe" />

@@ -3,8 +3,9 @@
 ## Styling
 
 - Use Tailwind CSS utilities for new UI work whenever practical.
+- Do not add global CSS for styling that can be expressed with existing Tailwind utilities.
 - Prefer responsive Tailwind classes such as `sm:`, `md:`, `lg:`, and `xl:` instead of desktop-only layouts.
-- Keep custom CSS minimal and scoped to cases that Tailwind cannot express cleanly.
+- Keep custom CSS minimal and scoped to cases that Tailwind cannot express cleanly or repeated project-level patterns.
 - Reuse existing design tokens, colors, spacing, and component patterns before adding new visual styles.
 
 ## Responsive Design
