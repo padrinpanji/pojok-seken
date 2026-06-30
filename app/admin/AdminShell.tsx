@@ -32,7 +32,7 @@ const adminSections: { label: string; items: AdminNavItem[] }[] = [
   {
     label: "Catalog",
     items: [
-      { label: "Products", key: "products", icon: "box" },
+      { label: "Products", key: "products", icon: "box", href: "/admin/products" },
       { label: "Scraping", key: "scraping", icon: "scrape", href: "/admin/scraping" },
       { label: "Categories", key: "categories", icon: "folder" },
       { label: "Tags", key: "tags", icon: "tag" }
