@@ -15,11 +15,13 @@ export default function SyncScrapedProductButton({
     detailUrl,
     title,
     categories,
+    defaultSeller,
     paginationParams,
 }: {
     detailUrl: string;
     title: string;
     categories: string[];
+    defaultSeller?: string;
     paginationParams: Record<string, string>;
 }) {
     const [open, setOpen] = useState(false);
@@ -40,6 +42,7 @@ export default function SyncScrapedProductButton({
                     detailUrls={[detailUrl]}
                     titles={[title]}
                     categories={categories}
+                    defaultSeller={defaultSeller}
                     paginationParams={paginationParams}
                     onClose={() => setOpen(false)}
                     onSuccess={() => setOpen(false)}

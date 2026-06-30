@@ -15,6 +15,7 @@ type SyncToProductDialogProps = {
     detailUrls: string[];
     titles: string[];
     categories: string[];
+    defaultSeller?: string;
     paginationParams: Record<string, string>;
     onClose: () => void;
     onSuccess: () => void;
@@ -24,6 +25,7 @@ export function SyncToProductDialog({
     detailUrls,
     titles,
     categories,
+    defaultSeller,
     paginationParams,
     onClose,
     onSuccess,
@@ -31,6 +33,7 @@ export function SyncToProductDialog({
     const [category, setCategory] = useState(categories[0] ?? "");
     const [customCategory, setCustomCategory] = useState("");
     const [useCustom, setUseCustom] = useState(false);
+    const [seller, setSeller] = useState(defaultSeller ?? "");
     const [error, setError] = useState<string>();
     const [isPending, startTransition] = useTransition();
     const dialogRef = useRef<HTMLDivElement>(null);
@@ -51,7 +54,7 @@ export function SyncToProductDialog({
         setError(undefined);
 
         startTransition(async () => {
-            const result = await syncScrapedProductsAction(detailUrls, finalCategory, paginationParams);
+            const result = await syncScrapedProductsAction(detailUrls, finalCategory, seller.trim(), paginationParams);
             if (result.error) {
                 setError(result.error);
             } else {
@@ -114,6 +117,19 @@ export function SyncToProductDialog({
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Seller name */}
+                    <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 mb-2">
+                            Seller name <span className="font-medium normal-case text-slate-400">(optional — uses scraped seller or source label)</span>
+                        </p>
+                        <input
+                            value={seller}
+                            onChange={(e) => setSeller(e.target.value)}
+                            placeholder="e.g. Taufik"
+                            className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        />
                     </div>
 
                     {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}

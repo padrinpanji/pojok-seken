@@ -243,6 +243,7 @@ export async function updateScrapedProductAction(
 export async function syncScrapedProductsAction(
   detailUrls: string[],
   category: string,
+  sellerOverride: string,
   paginationParams: Record<string, string>,
 ): Promise<{ error?: string }> {
   if (!(await hasSuperadminSession())) {
@@ -265,6 +266,12 @@ export async function syncScrapedProductsAction(
 
   for (const scraped of targets) {
     const name = scraped.title || "Untitled";
+    // Priority: manual override > raw.sellerName from API > sourceLabel
+    const sellerName =
+      sellerOverride.trim() ||
+      (typeof scraped.raw?.sellerName === "string" && scraped.raw.sellerName
+        ? scraped.raw.sellerName
+        : scraped.sourceLabel || "Unknown Seller");
     const result = await createProduct({
       name,
       slug: generateSlug(name),
@@ -275,7 +282,7 @@ export async function syncScrapedProductsAction(
       image: scraped.imageUrl || "",
       gallery: scraped.imageUrl ? [scraped.imageUrl] : [],
       year: "",
-      seller: scraped.sourceLabel || "",
+      seller: sellerName,
       description: scraped.description || scraped.title || "",
       highlights: [],
     });

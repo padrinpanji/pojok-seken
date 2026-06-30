@@ -677,6 +677,7 @@ function ScrapedProductsTable({
                           detailUrl={product.detailUrl}
                           title={product.title}
                           categories={categories}
+                          defaultSeller={typeof product.raw?.sellerName === "string" ? product.raw.sellerName : undefined}
                           paginationParams={paginationParams}
                         />
                         <RemoveScrapedProductForm
@@ -906,6 +907,25 @@ function ProductDetailModal({
                       {product.sourceLabel}
                     </dd>
                   </div>
+                  {product.raw?.sellerName ? (
+                    <div>
+                      <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        Seller
+                      </dt>
+                      <dd className="mt-1 break-words text-sm font-bold text-slate-800">
+                        {String(product.raw.sellerName)}
+                      </dd>
+                    </div>
+                  ) : (
+                    <div>
+                      <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        Seller
+                      </dt>
+                      <dd className="mt-1 text-sm font-semibold text-slate-400 italic">
+                        Not available from {product.sourceLabel} API
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
                       Scraped At

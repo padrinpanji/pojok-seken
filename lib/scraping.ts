@@ -1259,6 +1259,14 @@ function extractOlxApiDrafts(
         console.log(`[OLX] Skipped (no price): "${title}" | price raw:`, JSON.stringify(item.price));
       }
 
+      // Extract seller name from OLX API response
+      // user_name is a top-level field in the search API response
+      const sellerName = readString(
+        item.user_name || item.user_id ||
+        (isRecord(item.user) ? item.user.name || item.user.store_name : null) ||
+        item.store_name || "",
+      );
+
       drafts.push({
         source: source.id,
         sourceLabel: source.label,
@@ -1271,6 +1279,7 @@ function extractOlxApiDrafts(
         detailUrl,
         raw: {
           extractor: "olx-api",
+          sellerName: sellerName || null,
         },
       });
     }
