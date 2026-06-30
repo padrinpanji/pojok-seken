@@ -5,7 +5,7 @@ import BodyScrollLock from "@/app/admin/scraping/BodyScrollLock";
 import BulkDeleteScrapedProductsForm from "@/app/admin/scraping/BulkDeleteScrapedProductsForm";
 import RemoveScrapedProductForm from "@/app/admin/scraping/RemoveScrapedProductForm";
 import ScrapedProductImage from "@/app/admin/scraping/ScrapedProductImage";
-import ScrapedProductDetailClient, { ScrapedProductPricePanel } from "@/app/admin/scraping/ScrapedProductDetailClient";
+import ScrapedProductDetailClient, { ScrapedProductPricePanel, ScrapedProductImagePanel } from "@/app/admin/scraping/ScrapedProductDetailClient";
 import { saveScrapeTargetUrl, scrapeNow } from "@/app/admin/scraping/actions";
 import ScrapeButton from "@/app/admin/scraping/ScrapeButton";
 import { formatPrice } from "@/data/products";
@@ -864,17 +864,7 @@ function ProductDetailModal({
               className="flex w-full flex-col gap-4 lg:sticky lg:top-5 lg:w-80 lg:shrink-0 xl:w-96"
               data-test-id={`admin-scraped-product-detail-side-panel-${source.id}`}
             >
-              <section
-                className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
-                data-test-id={`admin-scraped-product-detail-image-panel-${source.id}`}
-              >
-                <ScrapedProductImage
-                  className="aspect-[4/3] w-full bg-slate-100 object-cover"
-                  src={product.imageUrl}
-                  alt={product.title}
-                  testId={`admin-scraped-product-detail-image-${source.id}`}
-                />
-              </section>
+              <ScrapedProductImagePanel product={product} />
 
               <ScrapedProductPricePanel product={product} />
 

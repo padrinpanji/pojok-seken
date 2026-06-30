@@ -4,18 +4,11 @@ import { useState, useTransition } from "react";
 import type { ScrapedProduct } from "@/lib/scraping";
 import { updateScrapedProductAction } from "@/app/admin/scraping/actions";
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
 function PencilIcon() {
     return (
-        <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-        >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
         </svg>
     );
@@ -23,16 +16,7 @@ function PencilIcon() {
 
 function CheckIcon() {
     return (
-        <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-        >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20 6 9 17l-5-5" />
         </svg>
     );
@@ -40,88 +24,41 @@ function CheckIcon() {
 
 function XIcon() {
     return (
-        <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-        >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M18 6 6 18M6 6l12 12" />
         </svg>
     );
 }
 
-type SectionFields = {
-    overview: { title: string; description: string };
-    links: { sourceUrl: string; imageUrl: string; detailUrl: string };
-};
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
-type EditingSection = keyof SectionFields | null;
+function inputClass(multiline = false) {
+    const base = "min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+    return multiline ? `${base} py-2` : `${base} h-10`;
+}
 
-function SectionEditButton({
-    onClick,
-    label,
-}: {
-    onClick: () => void;
-    label: string;
-}) {
+function FieldLabel({ children }: { children: React.ReactNode }) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-label={label}
-            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700"
-        >
-            <PencilIcon />
-        </button>
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+            {children}
+        </p>
     );
 }
 
-function SectionSaveButton({
-    onClick,
-    disabled,
-}: {
-    onClick: () => void;
-    disabled: boolean;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-            <CheckIcon />
-            Save
-        </button>
-    );
+function formatCurrency(value: number) {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
 }
 
-function SectionCancelButton({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-300 hover:text-rose-600"
-        >
-            <XIcon />
-        </button>
-    );
+function parseCurrencyInput(value: string): number | null {
+    const digits = value.replace(/\D/g, "");
+    const num = Number(digits);
+    return digits && Number.isFinite(num) ? num : null;
 }
+
+// ─── Section header with pencil / save / cancel ───────────────────────────────
 
 function SectionHeader({
-    eyebrow,
-    title,
-    isEditing,
-    isPending,
-    onEdit,
-    onSave,
-    onCancel,
-    error,
+    eyebrow, title, isEditing, isPending, onEdit, onSave, onCancel, error,
 }: {
     eyebrow?: string;
     title: string;
@@ -136,100 +73,146 @@ function SectionHeader({
         <div className="mb-4">
             <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                    {eyebrow ? (
-                        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                            {eyebrow}
-                        </p>
-                    ) : null}
-                    <h3 className={`${eyebrow ? "mt-1" : ""} text-base font-black text-slate-950`}>
-                        {title}
-                    </h3>
+                    {eyebrow ? <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">{eyebrow}</p> : null}
+                    <h3 className={`${eyebrow ? "mt-1" : ""} text-base font-black text-slate-950`}>{title}</h3>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                     {isEditing ? (
                         <>
-                            <SectionSaveButton onClick={onSave} disabled={isPending} />
-                            <SectionCancelButton onClick={onCancel} />
+                            <button type="button" onClick={onSave} disabled={isPending}
+                                className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+                                <CheckIcon />Save
+                            </button>
+                            <button type="button" onClick={onCancel}
+                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-300 hover:text-rose-600">
+                                <XIcon />
+                            </button>
                         </>
                     ) : (
-                        <SectionEditButton onClick={onEdit} label={`Edit ${title}`} />
+                        <button type="button" onClick={onEdit} aria-label={`Edit ${title}`}
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-300 hover:text-emerald-700">
+                            <PencilIcon />
+                        </button>
                     )}
                 </div>
             </div>
-            {error ? (
-                <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>
-            ) : null}
+            {error ? <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p> : null}
         </div>
     );
 }
 
-function inputClass(multiline = false) {
-    const base =
-        "min-w-0 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
-    return multiline ? `${base} py-2` : `${base} h-10`;
-}
+// ─── Image panel (sidebar) ────────────────────────────────────────────────────
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-            {children}
-        </p>
-    );
-}
-
-// Format a numeric value as IDR currency string
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(value);
-}
-
-// Parse a currency-formatted string back to a number
-function parseCurrencyInput(value: string): number | null {
-    const digits = value.replace(/\D/g, "");
-    const num = Number(digits);
-    return digits && Number.isFinite(num) ? num : null;
-}
-
-export function ScrapedProductPricePanel({
-    product,
-}: {
-    product: ScrapedProduct;
-}) {
-    const initialPrice = product.price != null ? String(product.price) : "";
-    const initialPriceText = product.priceText ?? "";
-
-    const [priceRaw, setPriceRaw] = useState(initialPrice);
-    const [priceText, setPriceText] = useState(initialPriceText);
+export function ScrapedProductImagePanel({ product }: { product: ScrapedProduct }) {
+    const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
+    const [draft, setDraft] = useState("");
     const [isEditing, setIsEditing] = useState(false);
+    const [preview, setPreview] = useState(product.imageUrl ?? "");
     const [error, setError] = useState<string>();
     const [isPending, startTransition] = useTransition();
 
-    // Display value: numeric price formatted as currency, or priceText fallback
-    const displayPrice = priceRaw
-        ? formatCurrency(Number(priceRaw))
-        : priceText || "-";
-
     function handleEdit() {
+        setDraft(imageUrl);
+        setPreview(imageUrl);
         setIsEditing(true);
         setError(undefined);
     }
 
     function handleCancel() {
-        setPriceRaw(initialPrice);
-        setPriceText(initialPriceText);
         setIsEditing(false);
-        setError(undefined);
+        setDraft("");
+        setPreview(imageUrl);
+    }
+
+    function handleSave() {
+        if (!product.id) return;
+        const id = product.id;
+        const trimmed = draft.trim();
+
+        startTransition(async () => {
+            const result = await updateScrapedProductAction(id, { imageUrl: trimmed });
+            if (result.error) {
+                setError(result.error);
+            } else {
+                setImageUrl(trimmed);
+                setPreview(trimmed);
+                setIsEditing(false);
+            }
+        });
+    }
+
+    return (
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            {/* Image preview */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                className="aspect-[4/3] w-full bg-slate-100 object-cover"
+                src={preview || "/logo-pojok-seken.svg"}
+                alt="Product image"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/logo-pojok-seken.svg"; }}
+            />
+
+            {/* Edit bar */}
+            <div className="border-t border-slate-100 px-3 py-2">
+                {isEditing ? (
+                    <div className="flex flex-col gap-2">
+                        <input
+                            className={inputClass()}
+                            type="url"
+                            placeholder="https://..."
+                            value={draft}
+                            onChange={(e) => {
+                                setDraft(e.target.value);
+                                setPreview(e.target.value.trim());
+                            }}
+                            autoFocus
+                        />
+                        {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
+                        <div className="flex gap-2">
+                            <button type="button" onClick={handleSave} disabled={isPending}
+                                className="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 text-xs font-black text-white transition hover:bg-emerald-900 disabled:opacity-60">
+                                <CheckIcon />Save
+                            </button>
+                            <button type="button" onClick={handleCancel}
+                                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-300 hover:text-rose-600">
+                                <XIcon />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <button type="button" onClick={handleEdit}
+                        className="inline-flex h-7 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700">
+                        <PencilIcon />Change image
+                    </button>
+                )}
+            </div>
+        </section>
+    );
+}
+
+// ─── Price panel (sidebar) ────────────────────────────────────────────────────
+
+export function ScrapedProductPricePanel({ product }: { product: ScrapedProduct }) {
+    const [priceRaw, setPriceRaw] = useState(product.price != null ? String(product.price) : "");
+    const [priceText, setPriceText] = useState(product.priceText ?? "");
+    const [isEditing, setIsEditing] = useState(false);
+    const [error, setError] = useState<string>();
+    const [isPending, startTransition] = useTransition();
+
+    const displayPrice = priceRaw ? formatCurrency(Number(priceRaw)) : priceText || "-";
+
+    function handleEdit() { setIsEditing(true); setError(undefined); }
+
+    function handleCancel() {
+        setPriceRaw(product.price != null ? String(product.price) : "");
+        setPriceText(product.priceText ?? "");
+        setIsEditing(false);
     }
 
     function handlePriceInputChange(e: React.ChangeEvent<HTMLInputElement>) {
         const raw = parseCurrencyInput(e.target.value);
         setPriceRaw(raw != null ? String(raw) : "");
-        if (raw != null) {
-            setPriceText(formatCurrency(raw));
-        }
+        if (raw != null) setPriceText(formatCurrency(raw));
     }
 
     function handleSave() {
@@ -242,48 +225,30 @@ export function ScrapedProductPricePanel({
                 price: priceNum,
                 priceText: priceText.trim() || (priceNum != null ? formatCurrency(priceNum) : ""),
             });
-
-            if (result.error) {
-                setError(result.error);
-            } else {
-                setIsEditing(false);
-            }
+            if (result.error) { setError(result.error); }
+            else { setIsEditing(false); }
         });
     }
 
     return (
         <section className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
-                    Price
-                </p>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Price</p>
                 <div className="flex items-center gap-1.5">
                     {isEditing ? (
                         <>
-                            <button
-                                type="button"
-                                onClick={handleSave}
-                                disabled={isPending}
-                                className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <CheckIcon />
-                                Save
+                            <button type="button" onClick={handleSave} disabled={isPending}
+                                className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-black text-white transition hover:bg-emerald-900 disabled:opacity-60">
+                                <CheckIcon />Save
                             </button>
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:border-rose-300 hover:text-rose-600"
-                            >
+                            <button type="button" onClick={handleCancel}
+                                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:border-rose-300 hover:text-rose-600">
                                 <XIcon />
                             </button>
                         </>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={handleEdit}
-                            aria-label="Edit price"
-                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:border-emerald-400 hover:text-emerald-800"
-                        >
+                        <button type="button" onClick={handleEdit} aria-label="Edit price"
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition hover:border-emerald-400 hover:text-emerald-800">
                             <PencilIcon />
                         </button>
                     )}
@@ -293,63 +258,47 @@ export function ScrapedProductPricePanel({
             {isEditing ? (
                 <div className="mt-3 flex flex-col gap-2">
                     <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">
-                            Amount (Rp)
-                        </p>
-                        <input
-                            className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm font-black text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                            inputMode="numeric"
-                            placeholder="e.g. 6500000"
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">Amount (Rp)</p>
+                        <input className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm font-black text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                            inputMode="numeric" placeholder="e.g. 6500000"
                             value={priceRaw ? formatCurrency(Number(priceRaw)) : ""}
                             onChange={handlePriceInputChange}
                         />
                     </div>
                     <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">
-                            Display text
-                        </p>
-                        <input
-                            className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">Display text</p>
+                        <input className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                             placeholder="e.g. Rp 6,5 Juta"
                             value={priceText}
                             onChange={(e) => setPriceText(e.target.value)}
                         />
                     </div>
-                    {error ? (
-                        <p className="text-xs font-semibold text-rose-600">{error}</p>
-                    ) : null}
+                    {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
                 </div>
             ) : (
                 <>
-                    <p className="mt-2 break-words text-2xl font-black leading-8 text-emerald-950">
-                        {displayPrice}
-                    </p>
-                    <p className="mt-2 break-words text-sm font-semibold leading-6 text-emerald-800">
-                        {priceText || "No original price text"}
-                    </p>
+                    <p className="mt-2 break-words text-2xl font-black leading-8 text-emerald-950">{displayPrice}</p>
+                    <p className="mt-2 break-words text-sm font-semibold leading-6 text-emerald-800">{priceText || "No original price text"}</p>
                 </>
             )}
         </section>
     );
 }
 
-export default function ScrapedProductDetailClient({
-    product,
-}: {
-    product: ScrapedProduct;
-}) {
-    const [fields, setFields] = useState<SectionFields>({
-        overview: {
-            title: product.title ?? "",
-            description: product.description ?? "",
-        },
-        links: {
-            sourceUrl: product.sourceUrl ?? "",
-            imageUrl: product.imageUrl ?? "",
-            detailUrl: product.detailUrl ?? "",
-        },
-    });
+// ─── Main detail sections (overview + source links) ───────────────────────────
 
+type SectionFields = {
+    overview: { title: string; description: string };
+    links: { sourceUrl: string; imageUrl: string; detailUrl: string };
+};
+
+type EditingSection = keyof SectionFields | null;
+
+export default function ScrapedProductDetailClient({ product }: { product: ScrapedProduct }) {
+    const [fields, setFields] = useState<SectionFields>({
+        overview: { title: product.title ?? "", description: product.description ?? "" },
+        links: { sourceUrl: product.sourceUrl ?? "", imageUrl: product.imageUrl ?? "", detailUrl: product.detailUrl ?? "" },
+    });
     const [editing, setEditing] = useState<EditingSection>(null);
     const [draft, setDraft] = useState<Partial<SectionFields[keyof SectionFields]>>({});
     const [errors, setErrors] = useState<Partial<Record<keyof SectionFields, string>>>({});
@@ -361,10 +310,7 @@ export default function ScrapedProductDetailClient({
         setErrors((prev) => ({ ...prev, [section]: undefined }));
     }
 
-    function cancelEdit() {
-        setEditing(null);
-        setDraft({});
-    }
+    function cancelEdit() { setEditing(null); setDraft({}); }
 
     function saveSection(section: keyof SectionFields) {
         if (!product.id) return;
@@ -386,10 +332,7 @@ export default function ScrapedProductDetailClient({
             if (result.error) {
                 setErrors((prev) => ({ ...prev, [section]: result.error }));
             } else {
-                setFields((prev) => ({
-                    ...prev,
-                    [section]: { ...prev[section], ...draft },
-                }));
+                setFields((prev) => ({ ...prev, [section]: { ...prev[section], ...draft } }));
                 setEditing(null);
                 setDraft({});
             }
@@ -404,51 +347,32 @@ export default function ScrapedProductDetailClient({
             {/* Product Overview */}
             <section className="min-w-0">
                 <SectionHeader
-                    eyebrow="Listing Summary"
-                    title="Product overview"
-                    isEditing={editing === "overview"}
-                    isPending={isPending}
-                    onEdit={() => startEdit("overview")}
-                    onSave={() => saveSection("overview")}
-                    onCancel={cancelEdit}
-                    error={errors.overview}
+                    eyebrow="Listing Summary" title="Product overview"
+                    isEditing={editing === "overview"} isPending={isPending}
+                    onEdit={() => startEdit("overview")} onSave={() => saveSection("overview")}
+                    onCancel={cancelEdit} error={errors.overview}
                 />
                 <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                     {editing === "overview" ? (
                         <div className="flex flex-col gap-3">
                             <div>
                                 <FieldLabel>Title</FieldLabel>
-                                <input
-                                    className={`mt-1 ${inputClass()}`}
-                                    value={overviewDraft.title ?? ""}
-                                    onChange={(e) =>
-                                        setDraft((d) => ({ ...d, title: e.target.value }))
-                                    }
-                                />
+                                <input className={`mt-1 ${inputClass()}`} value={overviewDraft.title ?? ""}
+                                    onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
                             </div>
                             <div>
                                 <FieldLabel>Description</FieldLabel>
-                                <textarea
-                                    className={`mt-1 ${inputClass(true)}`}
-                                    rows={4}
-                                    value={overviewDraft.description ?? ""}
-                                    onChange={(e) =>
-                                        setDraft((d) => ({ ...d, description: e.target.value }))
-                                    }
-                                />
+                                <textarea className={`mt-1 ${inputClass(true)}`} rows={4} value={overviewDraft.description ?? ""}
+                                    onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} />
                             </div>
                         </div>
                     ) : (
                         <>
                             <FieldLabel>Title</FieldLabel>
-                            <p className="mt-2 break-words text-lg font-black leading-7 text-slate-950">
-                                {fields.overview.title || "-"}
-                            </p>
+                            <p className="mt-2 break-words text-lg font-black leading-7 text-slate-950">{fields.overview.title || "-"}</p>
                             <div className="mt-4 border-t border-slate-100 pt-4">
                                 <FieldLabel>Description</FieldLabel>
-                                <p className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-7 text-slate-700">
-                                    {fields.overview.description || "-"}
-                                </p>
+                                <p className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-7 text-slate-700">{fields.overview.description || "-"}</p>
                             </div>
                         </>
                     )}
@@ -458,97 +382,49 @@ export default function ScrapedProductDetailClient({
             {/* Source Links */}
             <section className="min-w-0">
                 <SectionHeader
-                    eyebrow="Navigation"
-                    title="Source links"
-                    isEditing={editing === "links"}
-                    isPending={isPending}
-                    onEdit={() => startEdit("links")}
-                    onSave={() => saveSection("links")}
-                    onCancel={cancelEdit}
-                    error={errors.links}
+                    eyebrow="Navigation" title="Source links"
+                    isEditing={editing === "links"} isPending={isPending}
+                    onEdit={() => startEdit("links")} onSave={() => saveSection("links")}
+                    onCancel={cancelEdit} error={errors.links}
                 />
                 {editing === "links" ? (
                     <div className="grid gap-3 xl:grid-cols-2">
-                        {(
-                            [
-                                { key: "sourceUrl", label: "Source URL" },
-                                { key: "imageUrl", label: "Image URL" },
-                            ] as const
-                        ).map(({ key, label }) => (
-                            <div
-                                key={key}
-                                className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                            >
+                        {([ { key: "sourceUrl", label: "Source URL" }, { key: "imageUrl", label: "Image URL" } ] as const).map(({ key, label }) => (
+                            <div key={key} className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
                                 <FieldLabel>{label}</FieldLabel>
-                                <input
-                                    className={`mt-1 ${inputClass()}`}
-                                    type="url"
-                                    value={linksDraft[key] ?? ""}
-                                    onChange={(e) =>
-                                        setDraft((d) => ({ ...d, [key]: e.target.value }))
-                                    }
-                                />
+                                <input className={`mt-1 ${inputClass()}`} type="url" value={linksDraft[key] ?? ""}
+                                    onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))} />
                             </div>
                         ))}
                         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm xl:col-span-2">
                             <FieldLabel>Detail URL</FieldLabel>
-                            <input
-                                className={`mt-1 ${inputClass()}`}
-                                type="url"
-                                value={linksDraft.detailUrl ?? ""}
-                                onChange={(e) =>
-                                    setDraft((d) => ({ ...d, detailUrl: e.target.value }))
-                                }
-                            />
+                            <input className={`mt-1 ${inputClass()}`} type="url" value={linksDraft.detailUrl ?? ""}
+                                onChange={(e) => setDraft((d) => ({ ...d, detailUrl: e.target.value }))} />
                         </div>
                     </div>
                 ) : (
                     <div className="grid gap-3 xl:grid-cols-2">
-                        {(
-                            [
-                                { key: "sourceUrl", label: "Source URL" },
-                                { key: "imageUrl", label: "Image URL" },
-                            ] as const
-                        ).map(({ key, label }) => (
-                            <div
-                                key={key}
-                                className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                            >
+                        {([ { key: "sourceUrl", label: "Source URL" }, { key: "imageUrl", label: "Image URL" } ] as const).map(({ key, label }) => (
+                            <div key={key} className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
                                 <div className="flex items-center justify-between gap-3">
                                     <FieldLabel>{label}</FieldLabel>
                                     {fields.links[key] ? (
-                                        <a
-                                            className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
-                                            href={fields.links[key]}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                        >
-                                            Open
-                                        </a>
+                                        <a className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
+                                            href={fields.links[key]} target="_blank" rel="noreferrer">Open</a>
                                     ) : null}
                                 </div>
-                                <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">
-                                    {fields.links[key] || "-"}
-                                </p>
+                                <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">{fields.links[key] || "-"}</p>
                             </div>
                         ))}
                         <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm xl:col-span-2">
                             <div className="flex items-center justify-between gap-3">
                                 <FieldLabel>Detail URL</FieldLabel>
                                 {fields.links.detailUrl ? (
-                                    <a
-                                        className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
-                                        href={fields.links.detailUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        Open
-                                    </a>
+                                    <a className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
+                                        href={fields.links.detailUrl} target="_blank" rel="noreferrer">Open</a>
                                 ) : null}
                             </div>
-                            <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">
-                                {fields.links.detailUrl || "-"}
-                            </p>
+                            <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">{fields.links.detailUrl || "-"}</p>
                         </div>
                     </div>
                 )}

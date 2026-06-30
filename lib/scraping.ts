@@ -15,7 +15,7 @@ export const SCRAPE_SOURCES = [
   },
   {
     id: "olx-bandung",
-    label: "OLX Bandung",
+    label: "OLX",
     url: "https://www.olx.co.id/bandung-kota_g4000018/q-barang-bekas",
     fallbackImage: SAFE_FALLBACK_IMAGE,
   },
@@ -1736,7 +1736,7 @@ function mapDbRow(row: ScrapedProductDbRow): ScrapedProduct | null {
     source: row.source,
     sourceLabel: row.source_label,
     sourceUrl: row.source_url,
-    imageUrl: getSafeImageUrl(row.image_url, row.source),
+    imageUrl: row.image_url || SAFE_FALLBACK_IMAGE,
     title: row.title,
     description: row.description || row.title,
     price: normalizedPrice.price,
