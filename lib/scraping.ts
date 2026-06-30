@@ -1887,3 +1887,48 @@ export async function deleteScrapedProduct(
 ): Promise<DeleteScrapedProductResult> {
   return deleteScrapedProducts([detailUrl]);
 }
+
+export type UpdateScrapedProductPayload = Partial<
+  Pick<
+    ScrapedProduct,
+    "title" | "description" | "price" | "priceText" | "sourceUrl" | "imageUrl" | "detailUrl"
+  >
+>;
+
+type UpdateScrapedProductResult = {
+  error?: string;
+};
+
+export async function updateScrapedProduct(
+  id: number,
+  payload: UpdateScrapedProductPayload,
+): Promise<UpdateScrapedProductResult> {
+  const supabase = createSupabaseAdminClient();
+
+  if (!supabase) {
+    return { error: getSupabaseAdminConfigError() };
+  }
+
+  const dbPayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (payload.title !== undefined) dbPayload.title = payload.title;
+  if (payload.description !== undefined) dbPayload.description = payload.description;
+  if (payload.price !== undefined) dbPayload.price = payload.price;
+  if (payload.priceText !== undefined) dbPayload.price_text = payload.priceText;
+  if (payload.sourceUrl !== undefined) dbPayload.source_url = payload.sourceUrl;
+  if (payload.imageUrl !== undefined) dbPayload.image_url = payload.imageUrl;
+  if (payload.detailUrl !== undefined) dbPayload.detail_url = payload.detailUrl;
+
+  const { error } = await supabase
+    .from("scraped_products")
+    .update(dbPayload)
+    .eq("id", id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
+}

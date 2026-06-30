@@ -10,7 +10,8 @@ import {
   resetScrapeSourceUrl,
   saveScrapedProducts,
   saveScrapeSourceUrl,
-  scrapeProductSource
+  scrapeProductSource,
+  updateScrapedProduct,
 } from "@/lib/scraping";
 
 function buildRedirectUrl(params: Record<string, string>) {
@@ -212,4 +213,29 @@ export async function saveScrapeTargetUrl(formData: FormData) {
       ...paginationParams
     })
   );
+}
+
+export async function updateScrapedProductAction(
+  id: number,
+  payload: {
+    title?: string;
+    description?: string;
+    price?: number | null;
+    priceText?: string;
+    sourceUrl?: string;
+    imageUrl?: string;
+    detailUrl?: string;
+  },
+): Promise<{ error?: string }> {
+  if (!(await hasSuperadminSession())) {
+    return { error: "Unauthorized" };
+  }
+
+  const result = await updateScrapedProduct(id, payload);
+
+  if (!result.error) {
+    revalidatePath("/admin/scraping");
+  }
+
+  return result;
 }

@@ -5,6 +5,7 @@ import BodyScrollLock from "@/app/admin/scraping/BodyScrollLock";
 import BulkDeleteScrapedProductsForm from "@/app/admin/scraping/BulkDeleteScrapedProductsForm";
 import RemoveScrapedProductForm from "@/app/admin/scraping/RemoveScrapedProductForm";
 import ScrapedProductImage from "@/app/admin/scraping/ScrapedProductImage";
+import ScrapedProductDetailClient, { ScrapedProductPricePanel } from "@/app/admin/scraping/ScrapedProductDetailClient";
 import { saveScrapeTargetUrl, scrapeNow } from "@/app/admin/scraping/actions";
 import ScrapeButton from "@/app/admin/scraping/ScrapeButton";
 import { formatPrice } from "@/data/products";
@@ -875,20 +876,7 @@ function ProductDetailModal({
                 />
               </section>
 
-              <section
-                className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 shadow-sm"
-                data-test-id={`admin-scraped-product-detail-price-panel-${source.id}`}
-              >
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
-                  Price
-                </p>
-                <p className="mt-2 break-words text-2xl font-black leading-8 text-emerald-950">
-                  {formatScrapedPrice(product)}
-                </p>
-                <p className="mt-2 break-words text-sm font-semibold leading-6 text-emerald-800">
-                  {product.priceText || "No original price text"}
-                </p>
-              </section>
+              <ScrapedProductPricePanel product={product} />
 
               <section
                 className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
@@ -930,99 +918,7 @@ function ProductDetailModal({
               className="flex min-w-0 flex-1 flex-col gap-6"
               data-test-id={`admin-scraped-product-detail-main-${source.id}`}
             >
-              <DetailSection
-                eyebrow="Listing Summary"
-                testId={`admin-scraped-product-detail-overview-section-${source.id}`}
-                title="Product overview"
-              >
-                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                    Title
-                  </p>
-                  <p className="mt-2 break-words text-lg font-black leading-7 text-slate-950">
-                    {product.title}
-                  </p>
-                  <div
-                    className="mt-4 border-solid border-t border-slate-100 pt-4"
-                    data-test-id={`admin-scraped-product-detail-description-${source.id}`}
-                  >
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                      Description
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-7 text-slate-700">
-                      {product.description || "-"}
-                    </p>
-                  </div>
-                </div>
-              </DetailSection>
-
-              <DetailSection
-                eyebrow="Normalized Fields"
-                testId={`admin-scraped-product-detail-fields-section-${source.id}`}
-                title="Scraped product data"
-              >
-                <div
-                  className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"
-                  data-test-id={`admin-scraped-product-detail-fields-${source.id}`}
-                >
-                  <DetailField
-                    label="Record ID"
-                    testId={`admin-scraped-product-detail-id-${source.id}`}
-                    value={product.id}
-                  />
-                  <DetailField
-                    label="Source Key"
-                    testId={`admin-scraped-product-detail-source-key-${source.id}`}
-                    value={product.source}
-                  />
-                  <DetailField
-                    label="Source Label"
-                    testId={`admin-scraped-product-detail-source-label-${source.id}`}
-                    value={product.sourceLabel}
-                  />
-                  <DetailField
-                    label="Scraped At"
-                    testId={`admin-scraped-product-detail-scraped-at-${source.id}`}
-                    value={scrapedAt}
-                  />
-                  <DetailField
-                    label="Numeric Price"
-                    testId={`admin-scraped-product-detail-price-${source.id}`}
-                    value={product.price}
-                  />
-                  <DetailField
-                    label="Price Text"
-                    testId={`admin-scraped-product-detail-price-text-${source.id}`}
-                    value={product.priceText}
-                  />
-                </div>
-              </DetailSection>
-
-              <DetailSection
-                eyebrow="Navigation"
-                testId={`admin-scraped-product-detail-links-section-${source.id}`}
-                title="Source links"
-              >
-                <div className="grid gap-3 xl:grid-cols-2">
-                  <DetailLinkField
-                    href={product.sourceUrl}
-                    label="Source URL"
-                    testId={`admin-scraped-product-detail-source-url-${source.id}`}
-                  />
-                  <DetailLinkField
-                    href={product.imageUrl}
-                    label="Image URL"
-                    testId={`admin-scraped-product-detail-image-url-${source.id}`}
-                  />
-                  <div className="xl:col-span-2">
-                    <DetailLinkField
-                      href={product.detailUrl}
-                      label="Detail URL"
-                      testId={`admin-scraped-product-detail-page-url-${source.id}`}
-                    />
-                  </div>
-                </div>
-              </DetailSection>
+              <ScrapedProductDetailClient product={product} />
 
               <DetailSection
                 eyebrow="Diagnostics"
