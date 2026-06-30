@@ -1,5 +1,8 @@
 import "server-only";
-import { createSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase-admin";
+import {
+  createSupabaseAdminClient,
+  getSupabaseAdminConfigError,
+} from "@/lib/supabase-admin";
 
 const SAFE_FALLBACK_IMAGE = "/logo-pojok-seken.svg";
 
@@ -8,14 +11,14 @@ export const SCRAPE_SOURCES = [
     id: "rumah123",
     label: "Rumah123",
     url: "https://rumah123.com/jual/cari",
-    fallbackImage: SAFE_FALLBACK_IMAGE
+    fallbackImage: SAFE_FALLBACK_IMAGE,
   },
   {
     id: "olx-bandung",
     label: "OLX Bandung",
     url: "https://www.olx.co.id/bandung-kota_g4000018/q-barang-bekas",
-    fallbackImage: SAFE_FALLBACK_IMAGE
-  }
+    fallbackImage: SAFE_FALLBACK_IMAGE,
+  },
 ] as const;
 
 type DefaultScrapeSource = (typeof SCRAPE_SOURCES)[number];
@@ -35,7 +38,7 @@ type PriceInfo = {
   priceText: string;
 };
 
-type ScrapedProductDraft = {
+export type ScrapedProductDraft = {
   source: string;
   sourceLabel: string;
   sourceUrl: string;
@@ -119,16 +122,36 @@ type SaveScrapeSourceUrlResult = {
 
 const MAX_PRODUCTS_PER_SOURCE = 12;
 const REQUEST_HEADERS = {
-  accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+  "accept-encoding": "gzip, deflate, br",
   "cache-control": "no-cache",
   pragma: "no-cache",
+  "sec-ch-ua":
+    '"Not_A Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+  "sec-fetch-dest": "document",
+  "sec-fetch-mode": "navigate",
+  "sec-fetch-site": "none",
+  "sec-fetch-user": "?1",
+  "upgrade-insecure-requests": "1",
   "user-agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 };
 const IMAGE_REQUEST_HEADERS = {
   ...REQUEST_HEADERS,
-  accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+  accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+};
+const OLX_API_HEADERS = {
+  ...REQUEST_HEADERS,
+  accept: "application/json, text/plain, */*",
+  origin: "https://www.olx.co.id",
+  referer: "https://www.olx.co.id/",
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-origin",
 };
 
 let fallbackScrapedProducts: ScrapedProduct[] = [];
@@ -144,18 +167,30 @@ function decodeHtmlEntities(value: string) {
     gt: ">",
     lt: "<",
     nbsp: " ",
-    quot: "\"",
-    apos: "'"
+    quot: '"',
+    apos: "'",
   };
 
   return value
-    .replace(/&#(\d+);/g, (_match, entity: string) => String.fromCodePoint(Number(entity)))
-    .replace(/&#x([a-f0-9]+);/gi, (_match, entity: string) => String.fromCodePoint(Number.parseInt(entity, 16)))
-    .replace(/&([a-z]+);/gi, (match, entity: string) => namedEntities[entity.toLowerCase()] || match);
+    .replace(/&#(\d+);/g, (_match, entity: string) =>
+      String.fromCodePoint(Number(entity)),
+    )
+    .replace(/&#x([a-f0-9]+);/gi, (_match, entity: string) =>
+      String.fromCodePoint(Number.parseInt(entity, 16)),
+    )
+    .replace(
+      /&([a-z]+);/gi,
+      (match, entity: string) => namedEntities[entity.toLowerCase()] || match,
+    );
 }
 
 function stripTags(value: string) {
-  return decodeHtmlEntities(value.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
+  return decodeHtmlEntities(
+    value
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+  );
 }
 
 function normalizeText(value: string) {
@@ -190,7 +225,10 @@ function normalizeScrapeTargetUrl(value: string) {
   }
 }
 
-function toConfiguredScrapeSource(defaultSource: DefaultScrapeSource, targetUrl?: string | null): ScrapeSource {
+function toConfiguredScrapeSource(
+  defaultSource: DefaultScrapeSource,
+  targetUrl?: string | null,
+): ScrapeSource {
   const normalizedTargetUrl = normalizeScrapeTargetUrl(targetUrl || "");
   const defaultUrl = defaultSource.url;
   const url = normalizedTargetUrl || defaultUrl;
@@ -199,7 +237,7 @@ function toConfiguredScrapeSource(defaultSource: DefaultScrapeSource, targetUrl?
     ...defaultSource,
     defaultUrl,
     isCustomUrl: url !== defaultUrl,
-    url
+    url,
   };
 }
 
@@ -213,6 +251,52 @@ function limitText(value: string, maxLength: number) {
   return `${normalized.slice(0, maxLength - 1).trim()}...`;
 }
 
+function translateOlxUrlToApi(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Only translate OLX URLs
+    if (!parsedUrl.hostname.includes("olx.co.id")) {
+      return url;
+    }
+
+    // Extract location ID from path like "bandung-kota_g4000018"
+    const locationMatch = parsedUrl.pathname.match(/_g(\d+)/);
+    const locationId = locationMatch ? locationMatch[1] : "";
+
+    // Extract query from path like "/q-barang-bekas"
+    const queryMatch = parsedUrl.pathname.match(/\/q-([^/]+)/);
+    const querySlug = queryMatch ? queryMatch[1] : "";
+    const query = querySlug.replace(/-/g, " ");
+
+    // Build API URL
+    const apiUrl = new URL("https://www.olx.co.id/api/relevance/v4/search");
+    if (locationId) apiUrl.searchParams.set("location", locationId);
+    apiUrl.searchParams.set("page", "1");
+    if (query) apiUrl.searchParams.set("query", query);
+
+    return apiUrl.toString();
+  } catch {
+    return url;
+  }
+}
+
+function slugifyOlxTitle(title: string) {
+  return normalizeText(title)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+}
+
+function buildOlxDetailUrl(adId: string, title: string) {
+  const titleSlug = slugifyOlxTitle(title) || "listing";
+
+  return `https://www.olx.co.id/item/${titleSlug}-iid-${adId}`;
+}
+
 function absoluteUrl(value: string, baseUrl: string) {
   const normalized = normalizeText(value);
 
@@ -223,11 +307,16 @@ function absoluteUrl(value: string, baseUrl: string) {
   try {
     const url = new URL(normalized, baseUrl);
 
-    if (url.pathname.endsWith("/_next/image") || url.pathname.endsWith("/_next/image/")) {
+    if (
+      url.pathname.endsWith("/_next/image") ||
+      url.pathname.endsWith("/_next/image/")
+    ) {
       const nestedUrl = url.searchParams.get("url");
 
       if (nestedUrl) {
-        const normalizedNestedUrl = nestedUrl.replace(/^https:\/(?!\/)/i, "https://").replace(/^http:\/(?!\/)/i, "http://");
+        const normalizedNestedUrl = nestedUrl
+          .replace(/^https:\/(?!\/)/i, "https://")
+          .replace(/^http:\/(?!\/)/i, "http://");
 
         return new URL(normalizedNestedUrl, baseUrl).toString();
       }
@@ -272,8 +361,17 @@ function isDisallowedImageUrl(imageUrl: string, sourceId?: string | null) {
     const hostname = url.hostname.toLowerCase();
     const pathname = url.pathname.toLowerCase();
 
+    // Allow OLX images (apollo.olx.co.id) even without extensions
+    if (sourceId === "olx-bandung" && hostname.includes("apollo.olx.co.id")) {
+      return false;
+    }
+
     if (sourceId === "rumah123") {
-      if (pathname.includes("/logo/") || pathname.includes("/photo/") || hostname === "pic.rumah123.com") {
+      if (
+        pathname.includes("/logo/") ||
+        pathname.includes("/photo/") ||
+        hostname === "pic.rumah123.com"
+      ) {
         return true;
       }
 
@@ -286,13 +384,22 @@ function isDisallowedImageUrl(imageUrl: string, sourceId?: string | null) {
   }
 }
 
-function getSafeImageUrl(imageUrl: string | null | undefined, sourceId?: string | null) {
+function getSafeImageUrl(
+  imageUrl: string | null | undefined,
+  sourceId?: string | null,
+) {
   const normalizedImageUrl = normalizeText(imageUrl || "");
 
-  return isDisallowedImageUrl(normalizedImageUrl, sourceId) ? SAFE_FALLBACK_IMAGE : normalizedImageUrl;
+  return isDisallowedImageUrl(normalizedImageUrl, sourceId)
+    ? SAFE_FALLBACK_IMAGE
+    : normalizedImageUrl;
 }
 
-function chooseBetterImageUrl(currentImageUrl: string, nextImageUrl: string, sourceId: string) {
+function chooseBetterImageUrl(
+  currentImageUrl: string,
+  nextImageUrl: string,
+  sourceId: string,
+) {
   const currentAllowed = !isDisallowedImageUrl(currentImageUrl, sourceId);
   const nextAllowed = !isDisallowedImageUrl(nextImageUrl, sourceId);
 
@@ -306,7 +413,10 @@ function chooseBetterImageUrl(currentImageUrl: string, nextImageUrl: string, sou
 function isImageResponse(response: Response) {
   const contentType = response.headers.get("content-type") || "";
 
-  return response.ok && (!contentType || contentType.toLowerCase().startsWith("image/"));
+  return (
+    response.ok &&
+    (!contentType || contentType.toLowerCase().startsWith("image/"))
+  );
 }
 
 async function isReachableImageUrl(imageUrl: string) {
@@ -319,7 +429,7 @@ async function isReachableImageUrl(imageUrl: string) {
       method: "HEAD",
       headers: IMAGE_REQUEST_HEADERS,
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000)
+      signal: AbortSignal.timeout(8_000),
     });
 
     if (isImageResponse(headResponse)) {
@@ -333,10 +443,10 @@ async function isReachableImageUrl(imageUrl: string) {
     const getResponse = await fetch(imageUrl, {
       headers: {
         ...IMAGE_REQUEST_HEADERS,
-        range: "bytes=0-1023"
+        range: "bytes=0-1023",
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000)
+      signal: AbortSignal.timeout(8_000),
     });
 
     return isImageResponse(getResponse);
@@ -345,7 +455,10 @@ async function isReachableImageUrl(imageUrl: string) {
   }
 }
 
-async function ensureDraftHasReachableImage(draft: ScrapedProductDraft, source: ScrapeSource) {
+async function ensureDraftHasReachableImage(
+  draft: ScrapedProductDraft,
+  source: ScrapeSource,
+) {
   const imageUrl = getSafeImageUrl(draft.imageUrl, source.id);
 
   if (imageUrl === SAFE_FALLBACK_IMAGE) {
@@ -355,11 +468,13 @@ async function ensureDraftHasReachableImage(draft: ScrapedProductDraft, source: 
   if (await isReachableImageUrl(imageUrl)) {
     return {
       ...draft,
-      imageUrl
+      imageUrl,
     };
   }
 
-  return source.id === "rumah123" ? null : { ...draft, imageUrl: SAFE_FALLBACK_IMAGE };
+  return source.id === "rumah123"
+    ? null
+    : { ...draft, imageUrl: SAFE_FALLBACK_IMAGE };
 }
 
 function parseAttributes(tag: string) {
@@ -368,7 +483,9 @@ function parseAttributes(tag: string) {
   let attributeMatch = attributePattern.exec(tag);
 
   while (attributeMatch) {
-    attributes[attributeMatch[1].toLowerCase()] = decodeHtmlEntities(attributeMatch[3]);
+    attributes[attributeMatch[1].toLowerCase()] = decodeHtmlEntities(
+      attributeMatch[3],
+    );
     attributeMatch = attributePattern.exec(tag);
   }
 
@@ -381,7 +498,12 @@ function getMetaContent(html: string, keys: string[]) {
 
   for (const tag of metaTags) {
     const attributes = parseAttributes(tag);
-    const key = (attributes.property || attributes.name || attributes.itemprop || "").toLowerCase();
+    const key = (
+      attributes.property ||
+      attributes.name ||
+      attributes.itemprop ||
+      ""
+    ).toLowerCase();
 
     if (normalizedKeys.includes(key) && attributes.content) {
       return normalizeText(attributes.content);
@@ -397,7 +519,10 @@ function getLinkHref(html: string, relName: string) {
   for (const tag of linkTags) {
     const attributes = parseAttributes(tag);
 
-    if ((attributes.rel || "").toLowerCase() === relName.toLowerCase() && attributes.href) {
+    if (
+      (attributes.rel || "").toLowerCase() === relName.toLowerCase() &&
+      attributes.href
+    ) {
       return normalizeText(attributes.href);
     }
   }
@@ -422,7 +547,12 @@ function extractImageFromHtml(html: string, baseUrl: string) {
 
   for (const tag of imageTags) {
     const attributes = parseAttributes(tag);
-    const imageSource = attributes.src || attributes["data-src"] || attributes["data-original"] || attributes.srcset || "";
+    const imageSource =
+      attributes.src ||
+      attributes["data-src"] ||
+      attributes["data-original"] ||
+      attributes.srcset ||
+      "";
     const firstSource = imageSource.split(",")[0]?.trim().split(/\s+/)[0] || "";
     const imageUrl = absoluteUrl(firstSource, baseUrl);
 
@@ -448,10 +578,14 @@ function extractImageUrlFromTag(tag: string, baseUrl: string) {
   return absoluteUrl(firstSource, baseUrl);
 }
 
-function getElementTextByAttribute(html: string, attributeName: string, attributeValue: string) {
+function getElementTextByAttribute(
+  html: string,
+  attributeName: string,
+  attributeValue: string,
+) {
   const pattern = new RegExp(
     `<([a-z0-9]+)\\b[^>]*${escapeRegExp(attributeName)}=(["'])${escapeRegExp(attributeValue)}\\2[^>]*>([\\s\\S]*?)<\\/\\1>`,
-    "i"
+    "i",
   );
   const match = html.match(pattern);
 
@@ -465,16 +599,18 @@ function parsePriceInfo(value: string): PriceInfo {
   if (freeMatch) {
     return {
       price: 0,
-      priceText: freeMatch[0]
+      priceText: freeMatch[0],
     };
   }
 
-  const priceMatch = text.match(/\b(?:rp|idr)\s*([0-9][0-9.,\s]*)(?:\s*(miliar|milyar|juta|ribu|rb|jt|m))?/i);
+  const priceMatch = text.match(
+    /\b(?:rp|idr)\s*([0-9][0-9.,\s]*)(?:\s*(miliar|milyar|juta|ribu|rb|jt|m))?/i,
+  );
 
   if (!priceMatch) {
     return {
       price: null,
-      priceText: ""
+      priceText: "",
     };
   }
 
@@ -491,7 +627,7 @@ function parsePriceInfo(value: string): PriceInfo {
   if (!Number.isFinite(valueNumber)) {
     return {
       price: null,
-      priceText: normalizeText(priceMatch[0])
+      priceText: normalizeText(priceMatch[0]),
     };
   }
 
@@ -506,7 +642,7 @@ function parsePriceInfo(value: string): PriceInfo {
 
   return {
     price: Math.round(valueNumber * multiplier),
-    priceText: normalizeText(priceMatch[0])
+    priceText: normalizeText(priceMatch[0]),
   };
 }
 
@@ -514,7 +650,7 @@ function formatPriceText(price: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(price);
 }
 
@@ -528,7 +664,7 @@ function normalizeRequiredPrice(price: number | null, priceText: string) {
   if (typeof price === "number" && Number.isFinite(price) && price > 0) {
     return {
       price,
-      priceText: normalizedPriceText || formatPriceText(price)
+      priceText: normalizedPriceText || formatPriceText(price),
     };
   }
 
@@ -537,14 +673,19 @@ function normalizeRequiredPrice(price: number | null, priceText: string) {
   if (parsedPrice.price && parsedPrice.price > 0) {
     return {
       price: parsedPrice.price,
-      priceText: normalizedPriceText || parsedPrice.priceText || formatPriceText(parsedPrice.price)
+      priceText:
+        normalizedPriceText ||
+        parsedPrice.priceText ||
+        formatPriceText(parsedPrice.price),
     };
   }
 
   return null;
 }
 
-function ensureDraftHasRequiredPrice(draft: ScrapedProductDraft): ScrapedProductDraft | null {
+function ensureDraftHasRequiredPrice(
+  draft: ScrapedProductDraft,
+): ScrapedProductDraft | null {
   const price = normalizeRequiredPrice(draft.price, draft.priceText);
 
   if (!price) {
@@ -557,12 +698,14 @@ function ensureDraftHasRequiredPrice(draft: ScrapedProductDraft): ScrapedProduct
     priceText: price.priceText,
     raw: {
       ...draft.raw,
-      priceRequired: true
-    }
+      priceRequired: true,
+    },
   };
 }
 
-function normalizeScrapedProductPrice(product: ScrapedProduct): ScrapedProduct | null {
+function normalizeScrapedProductPrice(
+  product: ScrapedProduct,
+): ScrapedProduct | null {
   const price = normalizeRequiredPrice(product.price, product.priceText);
 
   if (!price) {
@@ -572,7 +715,7 @@ function normalizeScrapedProductPrice(product: ScrapedProduct): ScrapedProduct |
   return {
     ...product,
     price: price.price,
-    priceText: price.priceText
+    priceText: price.priceText,
   };
 }
 
@@ -600,22 +743,51 @@ function readString(value: unknown) {
   return "";
 }
 
+function readNestedString(record: JsonRecord, keys: string[]) {
+  let value: unknown = record;
+
+  for (const key of keys) {
+    if (!isRecord(value)) {
+      return "";
+    }
+
+    value = value[key];
+  }
+
+  return readString(value);
+}
+
+function readOlxImageUrl(value: unknown) {
+  if (!isRecord(value)) {
+    return "";
+  }
+
+  return (
+    readNestedString(value, ["full", "url"]) ||
+    readNestedString(value, ["big", "url"]) ||
+    readNestedString(value, ["medium", "url"]) ||
+    readString(value.url)
+  );
+}
+
 function normalizeRawData(value: unknown): ScrapedRawData {
   if (!isRecord(value)) {
     return {};
   }
 
   return Object.fromEntries(
-    Object.entries(value).filter((entry): entry is [string, ScrapedRawValue] => {
-      const entryValue = entry[1];
+    Object.entries(value).filter(
+      (entry): entry is [string, ScrapedRawValue] => {
+        const entryValue = entry[1];
 
-      return (
-        typeof entryValue === "string" ||
-        typeof entryValue === "number" ||
-        typeof entryValue === "boolean" ||
-        entryValue === null
-      );
-    })
+        return (
+          typeof entryValue === "string" ||
+          typeof entryValue === "number" ||
+          typeof entryValue === "boolean" ||
+          entryValue === null
+        );
+      },
+    ),
   );
 }
 
@@ -657,7 +829,10 @@ function readImageValue(value: unknown, baseUrl: string): string {
   }
 
   if (isRecord(value)) {
-    return readImageValue(value.url || value.contentUrl || value.thumbnailUrl, baseUrl);
+    return readImageValue(
+      value.url || value.contentUrl || value.thumbnailUrl,
+      baseUrl,
+    );
   }
 
   return "";
@@ -667,7 +842,12 @@ function readOfferPrice(record: JsonRecord): PriceInfo {
   const offers = record.offers;
   const offerRecord = Array.isArray(offers) ? offers.find(isRecord) : offers;
   const priceSource = isRecord(offerRecord) ? offerRecord : record;
-  const priceText = readFirstString(priceSource, ["price", "lowPrice", "highPrice", "priceSpecification"]);
+  const priceText = readFirstString(priceSource, [
+    "price",
+    "lowPrice",
+    "highPrice",
+    "priceSpecification",
+  ]);
   const currency = readFirstString(priceSource, ["priceCurrency"]);
 
   if (!priceText) {
@@ -679,20 +859,38 @@ function readOfferPrice(record: JsonRecord): PriceInfo {
   if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
     return {
       price: Math.round(parsedPrice),
-      priceText: currency.toUpperCase() === "IDR" || !currency ? formatPriceText(parsedPrice) : `${currency} ${priceText}`
+      priceText:
+        currency.toUpperCase() === "IDR" || !currency
+          ? formatPriceText(parsedPrice)
+          : `${currency} ${priceText}`,
     };
   }
 
   return parsePriceInfo(priceText);
 }
 
-function recordToDraft(record: JsonRecord, source: ScrapeSource): ScrapedProductDraft | null {
+function recordToDraft(
+  record: JsonRecord,
+  source: ScrapeSource,
+): ScrapedProductDraft | null {
   const type = readJsonType(record);
-  const title = normalizeTitle(readFirstString(record, ["name", "title", "headline"]));
-  const detailUrl = absoluteUrl(readFirstString(record, ["url", "mainEntityOfPage", "@id"]), source.url);
-  const imageUrl = readImageValue(record.image || record.thumbnailUrl || record.photo, source.url);
+  const title = normalizeTitle(
+    readFirstString(record, ["name", "title", "headline"]),
+  );
+  const detailUrl = absoluteUrl(
+    readFirstString(record, ["url", "mainEntityOfPage", "@id"]),
+    source.url,
+  );
+  const imageUrl = readImageValue(
+    record.image || record.thumbnailUrl || record.photo,
+    source.url,
+  );
   const price = readOfferPrice(record);
-  const description = readFirstString(record, ["description", "caption", "summary"]);
+  const description = readFirstString(record, [
+    "description",
+    "caption",
+    "summary",
+  ]);
   const looksLikeProduct =
     type.includes("product") ||
     type.includes("offer") ||
@@ -717,8 +915,8 @@ function recordToDraft(record: JsonRecord, source: ScrapeSource): ScrapedProduct
     detailUrl,
     raw: {
       extractor: "json-ld",
-      schemaType: type || null
-    }
+      schemaType: type || null,
+    },
   };
 }
 
@@ -748,7 +946,9 @@ function getScriptContentById(html: string, scriptId: string) {
 }
 
 function getRumah123SeoRescuePayload(html: string) {
-  const parsed = parseJsonCandidate(getScriptContentById(html, "__ldp_seo_rescue"));
+  const parsed = parseJsonCandidate(
+    getScriptContentById(html, "__ldp_seo_rescue"),
+  );
 
   return isRecord(parsed) ? parsed : null;
 }
@@ -759,7 +959,11 @@ function isLikelyRumah123PropertyImage(imageUrl: string) {
     const hostname = url.hostname.toLowerCase();
     const pathname = url.pathname.toLowerCase();
 
-    return hostname.includes("picture.rumah123.com") && pathname.includes("/r123-images/") && pathname.includes("/customer/");
+    return (
+      hostname.includes("picture.rumah123.com") &&
+      pathname.includes("/r123-images/") &&
+      pathname.includes("/customer/")
+    );
   } catch {
     return false;
   }
@@ -770,7 +974,8 @@ function extractRumah123MainImage(html: string, detailUrl: string) {
 
   for (const tag of imageTags) {
     const attributes = parseAttributes(tag);
-    const testId = attributes["data-test-id"] || attributes["data-testid"] || "";
+    const testId =
+      attributes["data-test-id"] || attributes["data-testid"] || "";
 
     if (testId === "ldp-image-main") {
       const imageUrl = extractImageUrlFromTag(tag, detailUrl);
@@ -794,11 +999,14 @@ function extractRumah123MainImage(html: string, detailUrl: string) {
 
 function extractRumah123PriceInfo(html: string) {
   const rescuePayload = getRumah123SeoRescuePayload(html);
-  const listingInfo = rescuePayload && isRecord(rescuePayload.listingInfo) ? rescuePayload.listingInfo : null;
+  const listingInfo =
+    rescuePayload && isRecord(rescuePayload.listingInfo)
+      ? rescuePayload.listingInfo
+      : null;
   const priceCandidates = [
     listingInfo ? readString(listingInfo.price) : "",
     getElementTextByAttribute(html, "data-testid", "ldp-text-price"),
-    getElementTextByAttribute(html, "data-test-id", "ldp-text-price")
+    getElementTextByAttribute(html, "data-test-id", "ldp-text-price"),
   ];
 
   for (const priceText of priceCandidates) {
@@ -813,7 +1021,7 @@ function extractRumah123PriceInfo(html: string) {
     if (price.price !== null || price.priceText) {
       return {
         price: price.price,
-        priceText: normalizedPriceText
+        priceText: normalizedPriceText,
       };
     }
   }
@@ -821,13 +1029,20 @@ function extractRumah123PriceInfo(html: string) {
   return null;
 }
 
-function collectStructuredDrafts(value: unknown, source: ScrapeSource, drafts: ScrapedProductDraft[], depth = 0) {
+function collectStructuredDrafts(
+  value: unknown,
+  source: ScrapeSource,
+  drafts: ScrapedProductDraft[],
+  depth = 0,
+) {
   if (depth > 8 || !value) {
     return;
   }
 
   if (Array.isArray(value)) {
-    value.forEach((item) => collectStructuredDrafts(item, source, drafts, depth + 1));
+    value.forEach((item) =>
+      collectStructuredDrafts(item, source, drafts, depth + 1),
+    );
     return;
   }
 
@@ -841,16 +1056,21 @@ function collectStructuredDrafts(value: unknown, source: ScrapeSource, drafts: S
     drafts.push(draft);
   }
 
-  Object.values(value).forEach((nestedValue) => collectStructuredDrafts(nestedValue, source, drafts, depth + 1));
+  Object.values(value).forEach((nestedValue) =>
+    collectStructuredDrafts(nestedValue, source, drafts, depth + 1),
+  );
 }
 
 function extractStructuredDrafts(html: string, source: ScrapeSource) {
   const drafts: ScrapedProductDraft[] = [];
-  const scriptPattern = /<script\b[^>]*type=(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi;
+  const scriptPattern =
+    /<script\b[^>]*type=(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi;
   let scriptMatch = scriptPattern.exec(html);
 
   while (scriptMatch) {
-    const parsed = parseJsonCandidate(decodeHtmlEntities(scriptMatch[2]).trim());
+    const parsed = parseJsonCandidate(
+      decodeHtmlEntities(scriptMatch[2]).trim(),
+    );
     collectStructuredDrafts(parsed, source, drafts);
     scriptMatch = scriptPattern.exec(html);
   }
@@ -864,11 +1084,20 @@ function isLikelyDetailUrl(url: string, source: ScrapeSource) {
     const path = parsedUrl.pathname.toLowerCase();
 
     if (source.id === "olx-bandung") {
-      return parsedUrl.hostname.includes("olx.co.id") && (path.includes("/item/") || path.includes("-iid-") || path.endsWith(".html"));
+      return (
+        parsedUrl.hostname.includes("olx.co.id") &&
+        (path.includes("/item/") ||
+          path.includes("-iid-") ||
+          path.endsWith(".html"))
+      );
     }
 
     if (source.id === "rumah123") {
-      return parsedUrl.hostname.includes("rumah123.com") && path !== "/jual/cari" && path.includes("properti");
+      return (
+        parsedUrl.hostname.includes("rumah123.com") &&
+        path !== "/jual/cari" &&
+        path.includes("properti")
+      );
     }
 
     return false;
@@ -881,7 +1110,10 @@ function deriveTitleFromAnchor(text: string, priceText: string) {
   const withoutPrice = priceText ? text.replace(priceText, " ") : text;
   const title = withoutPrice
     .replace(/\b(hari ini|kemarin|\d+\s+hari yang lalu)\b.*$/i, "")
-    .replace(/\b\d{2}\s+(jan|feb|mar|apr|mei|jun|jul|agu|sep|okt|nov|des)\b.*$/i, "")
+    .replace(
+      /\b\d{2}\s+(jan|feb|mar|apr|mei|jun|jul|agu|sep|okt|nov|des)\b.*$/i,
+      "",
+    )
     .replace(/\s+/g, " ")
     .trim();
 
@@ -890,7 +1122,8 @@ function deriveTitleFromAnchor(text: string, priceText: string) {
 
 function extractAnchorDrafts(html: string, source: ScrapeSource) {
   const drafts: ScrapedProductDraft[] = [];
-  const anchorPattern = /<a\b[^>]*href=(["'])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a>/gi;
+  const anchorPattern =
+    /<a\b[^>]*href=(["'])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a>/gi;
   let anchorMatch = anchorPattern.exec(html);
 
   while (anchorMatch) {
@@ -911,8 +1144,14 @@ function extractAnchorDrafts(html: string, source: ScrapeSource) {
       continue;
     }
 
-    const nearbyHtml = html.slice(Math.max(0, anchorMatch.index - 1200), Math.min(html.length, anchorMatch.index + anchorMatch[0].length + 1600));
-    const imageUrl = getSafeImageUrl(extractImageFromHtml(nearbyHtml, source.url), source.id);
+    const nearbyHtml = html.slice(
+      Math.max(0, anchorMatch.index - 1200),
+      Math.min(html.length, anchorMatch.index + anchorMatch[0].length + 1600),
+    );
+    const imageUrl = getSafeImageUrl(
+      extractImageFromHtml(nearbyHtml, source.url),
+      source.id,
+    );
 
     drafts.push({
       source: source.id,
@@ -925,8 +1164,8 @@ function extractAnchorDrafts(html: string, source: ScrapeSource) {
       priceText: price.priceText,
       detailUrl,
       raw: {
-        extractor: "anchor"
-      }
+        extractor: "anchor",
+      },
     });
 
     anchorMatch = anchorPattern.exec(html);
@@ -935,25 +1174,101 @@ function extractAnchorDrafts(html: string, source: ScrapeSource) {
   return drafts;
 }
 
-function extractMetadataDraft(html: string, source: ScrapeSource, detailUrl: string): Partial<ScrapedProductDraft> {
-  const canonicalUrl = absoluteUrl(getLinkHref(html, "canonical"), detailUrl) || detailUrl;
-  const title = normalizeTitle(getMetaContent(html, ["og:title", "twitter:title"]) || getTitleTag(html));
-  const description = getMetaContent(html, ["og:description", "twitter:description", "description"]);
-  const imageUrl = absoluteUrl(getMetaContent(html, ["og:image", "twitter:image", "image"]), detailUrl);
+function extractMetadataDraft(
+  html: string,
+  source: ScrapeSource,
+  detailUrl: string,
+): Partial<ScrapedProductDraft> {
+  const canonicalUrl =
+    absoluteUrl(getLinkHref(html, "canonical"), detailUrl) || detailUrl;
+  const title = normalizeTitle(
+    getMetaContent(html, ["og:title", "twitter:title"]) || getTitleTag(html),
+  );
+  const description = getMetaContent(html, [
+    "og:description",
+    "twitter:description",
+    "description",
+  ]);
+  const imageUrl = absoluteUrl(
+    getMetaContent(html, ["og:image", "twitter:image", "image"]),
+    detailUrl,
+  );
   const price = parsePriceInfo(html);
   const structuredDrafts = extractStructuredDrafts(html, source);
-  const structuredDraft = structuredDrafts.find((draft) => draft.detailUrl === canonicalUrl) || structuredDrafts[0];
-  const rumah123ImageUrl = source.id === "rumah123" ? extractRumah123MainImage(html, detailUrl) : "";
-  const rumah123Price = source.id === "rumah123" ? extractRumah123PriceInfo(html) : null;
+  const structuredDraft =
+    structuredDrafts.find((draft) => draft.detailUrl === canonicalUrl) ||
+    structuredDrafts[0];
+  const rumah123ImageUrl =
+    source.id === "rumah123" ? extractRumah123MainImage(html, detailUrl) : "";
+  const rumah123Price =
+    source.id === "rumah123" ? extractRumah123PriceInfo(html) : null;
 
   return {
     title: structuredDraft?.title || title,
     description: structuredDraft?.description || description,
     imageUrl: rumah123ImageUrl || structuredDraft?.imageUrl || imageUrl,
     price: rumah123Price?.price ?? structuredDraft?.price ?? price.price,
-    priceText: rumah123Price?.priceText || structuredDraft?.priceText || price.priceText,
-    detailUrl: canonicalUrl
+    priceText:
+      rumah123Price?.priceText || structuredDraft?.priceText || price.priceText,
+    detailUrl: canonicalUrl,
   };
+}
+
+function extractOlxApiDrafts(
+  jsonText: string,
+  source: ScrapeSource,
+): ScrapedProductDraft[] {
+  const drafts: ScrapedProductDraft[] = [];
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    const items = Array.isArray(parsed?.data) ? parsed.data : [];
+
+    for (const item of items) {
+      if (!isRecord(item)) continue;
+
+      const adId = readString(item.ad_id || item.id);
+      const title = normalizeTitle(readString(item.title));
+      const description = readString(item.description);
+      const detailUrl = adId ? buildOlxDetailUrl(adId, title) : "";
+
+      if (!title || !detailUrl || title.length < 6) continue;
+
+      const priceObj = isRecord(item.price) ? item.price : null;
+      const priceData = isRecord(priceObj?.value) ? priceObj.value : null;
+      const priceRaw =
+        typeof priceData?.raw === "number" ? priceData.raw : null;
+      const priceDisplay = readString(priceData?.display);
+
+      const images = Array.isArray(item.images) ? item.images : [];
+      const firstImage = images[0];
+      const imageUrl = readOlxImageUrl(firstImage);
+
+      drafts.push({
+        source: source.id,
+        sourceLabel: source.label,
+        sourceUrl: source.url,
+        imageUrl: getSafeImageUrl(imageUrl, source.id),
+        title: limitText(title, 160),
+        description: limitText(description || title, 320),
+        price: priceRaw,
+        priceText: priceDisplay || (priceRaw ? formatPriceText(priceRaw) : ""),
+        detailUrl,
+        raw: {
+          extractor: "olx-api",
+        },
+      });
+    }
+  } catch (error) {
+    // Log JSON parse or extraction errors for debugging
+    console.error(
+      "OLX API extraction error:",
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+
+  return drafts;
 }
 
 function dedupeDrafts(drafts: ScrapedProductDraft[]) {
@@ -970,14 +1285,21 @@ function dedupeDrafts(drafts: ScrapedProductDraft[]) {
     draftMap.set(draft.detailUrl, {
       ...existingDraft,
       title: existingDraft.title || draft.title,
-      description: existingDraft.description.length >= draft.description.length ? existingDraft.description : draft.description,
-      imageUrl: chooseBetterImageUrl(existingDraft.imageUrl, draft.imageUrl, draft.source),
+      description:
+        existingDraft.description.length >= draft.description.length
+          ? existingDraft.description
+          : draft.description,
+      imageUrl: chooseBetterImageUrl(
+        existingDraft.imageUrl,
+        draft.imageUrl,
+        draft.source,
+      ),
       price: existingDraft.price ?? draft.price,
       priceText: existingDraft.priceText || draft.priceText,
       raw: {
         ...existingDraft.raw,
-        mergedExtractor: draft.raw.extractor || null
-      }
+        mergedExtractor: draft.raw.extractor || null,
+      },
     });
   });
 
@@ -987,9 +1309,11 @@ function dedupeDrafts(drafts: ScrapedProductDraft[]) {
 async function fetchHtml(url: string) {
   try {
     const response = await fetch(url, {
-      headers: REQUEST_HEADERS,
+      headers: url.includes("olx.co.id/api/")
+        ? OLX_API_HEADERS
+        : REQUEST_HEADERS,
       cache: "no-store",
-      signal: AbortSignal.timeout(18_000)
+      signal: AbortSignal.timeout(18_000),
     });
 
     const html = await response.text();
@@ -997,25 +1321,25 @@ async function fetchHtml(url: string) {
     if (!response.ok) {
       return {
         html: "",
-        error: `${response.status} ${response.statusText}`.trim()
+        error: `${response.status} ${response.statusText}`.trim(),
       };
     }
 
     if (!html.trim()) {
       return {
         html: "",
-        error: "The source returned an empty response."
+        error: "The source returned an empty response.",
       };
     }
 
     return {
       html,
-      error: ""
+      error: "",
     };
   } catch (error) {
     return {
       html: "",
-      error: error instanceof Error ? error.message : "Unable to fetch source."
+      error: error instanceof Error ? error.message : "Unable to fetch source.",
     };
   }
 }
@@ -1032,15 +1356,21 @@ async function enrichDraft(draft: ScrapedProductDraft, source: ScrapeSource) {
   return {
     ...draft,
     title: metadata.title ? limitText(metadata.title, 160) : draft.title,
-    description: metadata.description ? limitText(metadata.description, 320) : draft.description,
-    imageUrl: chooseBetterImageUrl(draft.imageUrl, metadata.imageUrl || "", source.id),
+    description: metadata.description
+      ? limitText(metadata.description, 320)
+      : draft.description,
+    imageUrl: chooseBetterImageUrl(
+      draft.imageUrl,
+      metadata.imageUrl || "",
+      source.id,
+    ),
     price: metadata.price ?? draft.price,
     priceText: metadata.priceText || draft.priceText,
     detailUrl: metadata.detailUrl || draft.detailUrl,
     raw: {
       ...draft.raw,
-      detailExtractor: "metadata"
-    }
+      detailExtractor: "metadata",
+    },
   };
 }
 
@@ -1049,14 +1379,16 @@ export function getBaseScrapeSourceById(sourceId: string) {
 }
 
 export async function getScrapeSources(): Promise<ScrapeSourcesResult> {
-  const fallbackSources = SCRAPE_SOURCES.map((source) => toConfiguredScrapeSource(source, fallbackScrapeSourceUrls[source.id]));
+  const fallbackSources = SCRAPE_SOURCES.map((source) =>
+    toConfiguredScrapeSource(source, fallbackScrapeSourceUrls[source.id]),
+  );
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
     return {
       sources: fallbackSources,
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1065,28 +1397,34 @@ export async function getScrapeSources(): Promise<ScrapeSourcesResult> {
     .select("source, target_url")
     .in(
       "source",
-      SCRAPE_SOURCES.map((source) => source.id)
+      SCRAPE_SOURCES.map((source) => source.id),
     );
 
   if (error) {
     return {
       sources: fallbackSources,
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   const settings = new Map<ScrapeSourceId, string>();
 
   ((data || []) as ScrapeSourceSettingDbRow[]).forEach((setting) => {
-    if (setting.source && isScrapeSourceId(setting.source) && setting.target_url) {
+    if (
+      setting.source &&
+      isScrapeSourceId(setting.source) &&
+      setting.target_url
+    ) {
       settings.set(setting.source, setting.target_url);
     }
   });
 
   return {
-    sources: SCRAPE_SOURCES.map((source) => toConfiguredScrapeSource(source, settings.get(source.id))),
-    usedFallback: false
+    sources: SCRAPE_SOURCES.map((source) =>
+      toConfiguredScrapeSource(source, settings.get(source.id)),
+    ),
+    usedFallback: false,
   };
 }
 
@@ -1100,14 +1438,17 @@ export async function getScrapeSourceById(sourceId: string) {
   return sources.find((source) => source.id === sourceId);
 }
 
-export async function saveScrapeSourceUrl(sourceId: ScrapeSourceId, targetUrl: string): Promise<SaveScrapeSourceUrlResult> {
+export async function saveScrapeSourceUrl(
+  sourceId: ScrapeSourceId,
+  targetUrl: string,
+): Promise<SaveScrapeSourceUrlResult> {
   const defaultSource = getDefaultScrapeSourceById(sourceId);
 
   if (!defaultSource) {
     return {
       targetUrl: "",
       error: "Unknown scrape source.",
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1117,13 +1458,13 @@ export async function saveScrapeSourceUrl(sourceId: ScrapeSourceId, targetUrl: s
     return {
       targetUrl: defaultSource.url,
       error: "Target URL harus memakai format http:// atau https://.",
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   fallbackScrapeSourceUrls = {
     ...fallbackScrapeSourceUrls,
-    [sourceId]: normalizedTargetUrl
+    [sourceId]: normalizedTargetUrl,
   };
 
   const supabase = createSupabaseAdminClient();
@@ -1132,7 +1473,7 @@ export async function saveScrapeSourceUrl(sourceId: ScrapeSourceId, targetUrl: s
     return {
       targetUrl: normalizedTargetUrl,
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1140,35 +1481,37 @@ export async function saveScrapeSourceUrl(sourceId: ScrapeSourceId, targetUrl: s
     {
       source: sourceId,
       target_url: normalizedTargetUrl,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     },
     {
-      onConflict: "source"
-    }
+      onConflict: "source",
+    },
   );
 
   if (error) {
     return {
       targetUrl: normalizedTargetUrl,
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   return {
     targetUrl: normalizedTargetUrl,
-    usedFallback: false
+    usedFallback: false,
   };
 }
 
-export async function resetScrapeSourceUrl(sourceId: ScrapeSourceId): Promise<SaveScrapeSourceUrlResult> {
+export async function resetScrapeSourceUrl(
+  sourceId: ScrapeSourceId,
+): Promise<SaveScrapeSourceUrlResult> {
   const defaultSource = getDefaultScrapeSourceById(sourceId);
 
   if (!defaultSource) {
     return {
       targetUrl: "",
       error: "Unknown scrape source.",
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1183,36 +1526,44 @@ export async function resetScrapeSourceUrl(sourceId: ScrapeSourceId): Promise<Sa
     return {
       targetUrl: defaultSource.url,
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
-  const { error } = await supabase.from("scraping_source_settings").delete().eq("source", sourceId);
+  const { error } = await supabase
+    .from("scraping_source_settings")
+    .delete()
+    .eq("source", sourceId);
 
   if (error) {
     return {
       targetUrl: defaultSource.url,
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   return {
     targetUrl: defaultSource.url,
-    usedFallback: false
+    usedFallback: false,
   };
 }
 
-function toScrapedProduct(draft: ScrapedProductDraft, scrapedAt: string): ScrapedProduct {
+function toScrapedProduct(
+  draft: ScrapedProductDraft,
+  scrapedAt: string,
+): ScrapedProduct {
   return {
     ...draft,
     imageUrl: getSafeImageUrl(draft.imageUrl, draft.source),
-    scrapedAt
+    scrapedAt,
   };
 }
 
 async function scrapeSource(source: ScrapeSource, scrapedAt: string) {
-  const response = await fetchHtml(source.url);
+  const fetchUrl =
+    source.id === "olx-bandung" ? translateOlxUrlToApi(source.url) : source.url;
+  const response = await fetchHtml(fetchUrl);
 
   if (!response.html) {
     return {
@@ -1222,17 +1573,59 @@ async function scrapeSource(source: ScrapeSource, scrapedAt: string) {
         sourceLabel: source.label,
         sourceUrl: source.url,
         count: 0,
-        error: response.error || "No HTML returned."
-      }
+        error: response.error || "No HTML returned.",
+      },
     };
   }
 
-  const drafts = dedupeDrafts([...extractStructuredDrafts(response.html, source), ...extractAnchorDrafts(response.html, source)]).slice(0, MAX_PRODUCTS_PER_SOURCE);
-  const enrichedDrafts = await Promise.all(drafts.map((draft) => enrichDraft(draft, source)));
+  // OLX uses JSON API, other sources use HTML scraping
+  const drafts =
+    source.id === "olx-bandung"
+      ? extractOlxApiDrafts(response.html, source).slice(
+          0,
+          MAX_PRODUCTS_PER_SOURCE,
+        )
+      : dedupeDrafts([
+          ...extractStructuredDrafts(response.html, source),
+          ...extractAnchorDrafts(response.html, source),
+        ]).slice(0, MAX_PRODUCTS_PER_SOURCE);
+
+  if (source.id === "olx-bandung") {
+    console.log(`[OLX DEBUG] Drafts extracted: ${drafts.length}`);
+    if (drafts.length > 0) {
+      console.log(
+        `[OLX DEBUG] First draft:`,
+        JSON.stringify({
+          title: drafts[0].title,
+          price: drafts[0].price,
+          priceText: drafts[0].priceText,
+          imageUrl: drafts[0].imageUrl,
+          detailUrl: drafts[0].detailUrl,
+        }),
+      );
+    }
+  }
+  // Skip enrichment for OLX - API provides complete data and detail pages are protected
+  const enrichedDrafts =
+    source.id === "olx-bandung"
+      ? drafts
+      : await Promise.all(drafts.map((draft) => enrichDraft(draft, source)));
   const pricedDrafts = dedupeDrafts(enrichedDrafts)
     .map(ensureDraftHasRequiredPrice)
     .filter((draft): draft is ScrapedProductDraft => Boolean(draft));
-  const reachableDrafts = await Promise.all(pricedDrafts.map((draft) => ensureDraftHasReachableImage(draft, source)));
+
+  if (source.id === "olx-bandung") {
+    console.log(`[OLX DEBUG] After price validation: ${pricedDrafts.length}`);
+  }
+  // Skip image reachability check for OLX - API provides valid image URLs
+  const reachableDrafts =
+    source.id === "olx-bandung"
+      ? pricedDrafts
+      : await Promise.all(
+          pricedDrafts.map((draft) =>
+            ensureDraftHasReachableImage(draft, source),
+          ),
+        );
   const products = reachableDrafts
     .filter((draft): draft is ScrapedProductDraft => Boolean(draft))
     .map((draft) => toScrapedProduct(draft, scrapedAt));
@@ -1244,24 +1637,30 @@ async function scrapeSource(source: ScrapeSource, scrapedAt: string) {
       sourceLabel: source.label,
       sourceUrl: source.url,
       count: products.length,
-      error: products.length ? undefined : "No product records with valid image and price were found."
-    }
+      error: products.length
+        ? undefined
+        : "No product records with valid image and price were found.",
+    },
   };
 }
 
 export async function scrapeProductSources(): Promise<ScrapeRunResult> {
   const scrapedAt = new Date().toISOString();
   const { sources } = await getScrapeSources();
-  const sourceRuns = await Promise.all(sources.map((source) => scrapeSource(source, scrapedAt)));
+  const sourceRuns = await Promise.all(
+    sources.map((source) => scrapeSource(source, scrapedAt)),
+  );
 
   return {
     products: sourceRuns.flatMap((sourceRun) => sourceRun.products),
     sources: sourceRuns.map((sourceRun) => sourceRun.result),
-    scrapedAt
+    scrapedAt,
   };
 }
 
-export async function scrapeProductSource(sourceId: ScrapeSourceId): Promise<ScrapeRunResult> {
+export async function scrapeProductSource(
+  sourceId: ScrapeSourceId,
+): Promise<ScrapeRunResult> {
   const scrapedAt = new Date().toISOString();
   const source = await getScrapeSourceById(sourceId);
 
@@ -1274,10 +1673,10 @@ export async function scrapeProductSource(sourceId: ScrapeSourceId): Promise<Scr
           sourceLabel: sourceId,
           sourceUrl: "",
           count: 0,
-          error: "Unknown scrape source."
-        }
+          error: "Unknown scrape source.",
+        },
       ],
-      scrapedAt
+      scrapedAt,
     };
   }
 
@@ -1286,18 +1685,27 @@ export async function scrapeProductSource(sourceId: ScrapeSourceId): Promise<Scr
   return {
     products: sourceRun.products,
     sources: [sourceRun.result],
-    scrapedAt
+    scrapedAt,
   };
 }
 
 function mapDbRow(row: ScrapedProductDbRow): ScrapedProduct | null {
-  if (!row.source || !row.source_label || !row.source_url || !row.title || !row.detail_url) {
+  if (
+    !row.source ||
+    !row.source_label ||
+    !row.source_url ||
+    !row.title ||
+    !row.detail_url
+  ) {
     return null;
   }
 
   const id = Number(row.id);
   const numericPrice = Number(row.price);
-  const normalizedPrice = normalizeRequiredPrice(Number.isFinite(numericPrice) ? numericPrice : null, row.price_text || "");
+  const normalizedPrice = normalizeRequiredPrice(
+    Number.isFinite(numericPrice) ? numericPrice : null,
+    row.price_text || "",
+  );
 
   if (!normalizedPrice) {
     return null;
@@ -1315,24 +1723,28 @@ function mapDbRow(row: ScrapedProductDbRow): ScrapedProduct | null {
     priceText: normalizedPrice.priceText,
     detailUrl: row.detail_url,
     scrapedAt: row.scraped_at || "",
-    raw: normalizeRawData(row.raw)
+    raw: normalizeRawData(row.raw),
   };
 }
 
-export async function getStoredScrapedProducts(limit = 60): Promise<StoredScrapedProductsResult> {
+export async function getStoredScrapedProducts(
+  limit = 60,
+): Promise<StoredScrapedProductsResult> {
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
     return {
       products: getValidFallbackScrapedProducts(),
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   const { data, error } = await supabase
     .from("scraped_products")
-    .select("id, source, source_label, source_url, image_url, title, description, price, price_text, detail_url, raw, scraped_at")
+    .select(
+      "id, source, source_label, source_url, image_url, title, description, price, price_text, detail_url, raw, scraped_at",
+    )
     .order("scraped_at", { ascending: false })
     .limit(limit);
 
@@ -1340,7 +1752,7 @@ export async function getStoredScrapedProducts(limit = 60): Promise<StoredScrape
     return {
       products: getValidFallbackScrapedProducts(),
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1348,24 +1760,30 @@ export async function getStoredScrapedProducts(limit = 60): Promise<StoredScrape
     products: ((data || []) as ScrapedProductDbRow[])
       .map(mapDbRow)
       .filter((product): product is ScrapedProduct => Boolean(product)),
-    usedFallback: false
+    usedFallback: false,
   };
 }
 
-export async function saveScrapedProducts(products: ScrapedProduct[]): Promise<SaveScrapedProductsResult> {
+export async function saveScrapedProducts(
+  products: ScrapedProduct[],
+): Promise<SaveScrapedProductsResult> {
   const validProducts = products
     .map(normalizeScrapedProductPrice)
     .filter((product): product is ScrapedProduct => Boolean(product));
-  const updatedDetailUrls = new Set(validProducts.map((product) => product.detailUrl));
+  const updatedDetailUrls = new Set(
+    validProducts.map((product) => product.detailUrl),
+  );
   fallbackScrapedProducts = [
     ...validProducts,
-    ...getValidFallbackScrapedProducts().filter((product) => !updatedDetailUrls.has(product.detailUrl))
+    ...getValidFallbackScrapedProducts().filter(
+      (product) => !updatedDetailUrls.has(product.detailUrl),
+    ),
   ];
 
   if (!validProducts.length) {
     return {
       savedCount: 0,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1375,7 +1793,7 @@ export async function saveScrapedProducts(products: ScrapedProduct[]): Promise<S
     return {
       savedCount: 0,
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
@@ -1391,68 +1809,81 @@ export async function saveScrapedProducts(products: ScrapedProduct[]): Promise<S
     detail_url: product.detailUrl,
     raw: product.raw,
     scraped_at: product.scrapedAt,
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   }));
   const { error } = await supabase.from("scraped_products").upsert(payload, {
-    onConflict: "detail_url"
+    onConflict: "detail_url",
   });
 
   if (error) {
     return {
       savedCount: 0,
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   return {
     savedCount: validProducts.length,
-    usedFallback: false
+    usedFallback: false,
   };
 }
 
-export async function deleteScrapedProducts(detailUrls: string[]): Promise<DeleteScrapedProductResult> {
-  const normalizedDetailUrls = Array.from(new Set(detailUrls.map((detailUrl) => detailUrl.trim()).filter(Boolean)));
+export async function deleteScrapedProducts(
+  detailUrls: string[],
+): Promise<DeleteScrapedProductResult> {
+  const normalizedDetailUrls = Array.from(
+    new Set(detailUrls.map((detailUrl) => detailUrl.trim()).filter(Boolean)),
+  );
 
   if (!normalizedDetailUrls.length) {
     return {
       deletedCount: 0,
       error: "Detail URL is required.",
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   const detailUrlSet = new Set(normalizedDetailUrls);
   const fallbackCountBeforeDelete = fallbackScrapedProducts.length;
 
-  fallbackScrapedProducts = fallbackScrapedProducts.filter((product) => !detailUrlSet.has(product.detailUrl));
+  fallbackScrapedProducts = fallbackScrapedProducts.filter(
+    (product) => !detailUrlSet.has(product.detailUrl),
+  );
 
   const supabase = createSupabaseAdminClient();
 
   if (!supabase) {
     return {
-      deletedCount: fallbackCountBeforeDelete - fallbackScrapedProducts.length || normalizedDetailUrls.length,
+      deletedCount:
+        fallbackCountBeforeDelete - fallbackScrapedProducts.length ||
+        normalizedDetailUrls.length,
       error: getSupabaseAdminConfigError(),
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
-  const { error } = await supabase.from("scraped_products").delete().in("detail_url", normalizedDetailUrls);
+  const { error } = await supabase
+    .from("scraped_products")
+    .delete()
+    .in("detail_url", normalizedDetailUrls);
 
   if (error) {
     return {
       deletedCount: fallbackCountBeforeDelete - fallbackScrapedProducts.length,
       error: error.message,
-      usedFallback: true
+      usedFallback: true,
     };
   }
 
   return {
     deletedCount: normalizedDetailUrls.length,
-    usedFallback: false
+    usedFallback: false,
   };
 }
 
-export async function deleteScrapedProduct(detailUrl: string): Promise<DeleteScrapedProductResult> {
+export async function deleteScrapedProduct(
+  detailUrl: string,
+): Promise<DeleteScrapedProductResult> {
   return deleteScrapedProducts([detailUrl]);
 }

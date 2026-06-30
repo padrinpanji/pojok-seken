@@ -6,15 +6,22 @@ import BulkDeleteScrapedProductsForm from "@/app/admin/scraping/BulkDeleteScrape
 import RemoveScrapedProductForm from "@/app/admin/scraping/RemoveScrapedProductForm";
 import ScrapedProductImage from "@/app/admin/scraping/ScrapedProductImage";
 import { saveScrapeTargetUrl, scrapeNow } from "@/app/admin/scraping/actions";
+import ScrapeButton from "@/app/admin/scraping/ScrapeButton";
 import { formatPrice } from "@/data/products";
-import { getScrapeSources, getStoredScrapedProducts, SCRAPE_SOURCES, type ScrapedProduct, type ScrapeSource } from "@/lib/scraping";
+import {
+  getScrapeSources,
+  getStoredScrapedProducts,
+  SCRAPE_SOURCES,
+  type ScrapedProduct,
+  type ScrapeSource,
+} from "@/lib/scraping";
 
 export const metadata: Metadata = {
   title: "Admin Scraping",
   robots: {
     index: false,
-    follow: false
-  }
+    follow: false,
+  },
 };
 
 type ScrapingPageProps = {
@@ -33,13 +40,17 @@ function getSingleParam(value: string | string[] | undefined) {
 function getPositiveInteger(value: string, fallback: number) {
   const parsedValue = Number.parseInt(value, 10);
 
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallback;
 }
 
 function getPageSize(value: string) {
   const parsedValue = getPositiveInteger(value, DEFAULT_PAGE_SIZE);
 
-  return PAGE_SIZE_OPTIONS.includes(parsedValue) ? parsedValue : DEFAULT_PAGE_SIZE;
+  return PAGE_SIZE_OPTIONS.includes(parsedValue)
+    ? parsedValue
+    : DEFAULT_PAGE_SIZE;
 }
 
 function getVisiblePageNumbers(currentPage: number, totalPages: number) {
@@ -47,7 +58,13 @@ function getVisiblePageNumbers(currentPage: number, totalPages: number) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
   }
 
-  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const pages = new Set([
+    1,
+    totalPages,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+  ]);
 
   if (currentPage <= 3) {
     pages.add(2);
@@ -108,7 +125,7 @@ function formatScrapedAt(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Asia/Jakarta"
+    timeZone: "Asia/Jakarta",
   }).format(date);
 }
 
@@ -120,18 +137,24 @@ function getPaginationHref(sourceId: string, page: number, perPage: number) {
   const params = new URLSearchParams({
     source: sourceId,
     page: String(page),
-    perPage: String(perPage)
+    perPage: String(perPage),
   });
 
   return `/admin/scraping?${params.toString()}`;
 }
 
-function getDetailHref(sourceId: string, product: ScrapedProduct, index: number, page: number, perPage: number) {
+function getDetailHref(
+  sourceId: string,
+  product: ScrapedProduct,
+  index: number,
+  page: number,
+  perPage: number,
+) {
   const params = new URLSearchParams({
     source: sourceId,
     page: String(page),
     perPage: String(perPage),
-    detail: getProductKey(product, index)
+    detail: getProductKey(product, index),
   });
 
   return `/admin/scraping?${params.toString()}`;
@@ -152,16 +175,23 @@ function formatFieldValue(value: string | number | boolean | null | undefined) {
 function DetailField({
   label,
   testId,
-  value
+  value,
 }: {
   label: string;
   testId: string;
   value: string | number | null | undefined;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" data-test-id={testId}>
-      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-bold leading-6 text-slate-800">{formatFieldValue(value)}</p>
+    <div
+      className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
+      data-test-id={testId}
+    >
+      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-bold leading-6 text-slate-800">
+        {formatFieldValue(value)}
+      </p>
     </div>
   );
 }
@@ -169,16 +199,21 @@ function DetailField({
 function DetailLinkField({
   href,
   label,
-  testId
+  testId,
 }: {
   href: string;
   label: string;
   testId: string;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm" data-test-id={testId}>
+    <div
+      className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
+      data-test-id={testId}
+    >
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+          {label}
+        </p>
         {href ? (
           <a
             className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-black text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
@@ -191,7 +226,9 @@ function DetailLinkField({
           </a>
         ) : null}
       </div>
-      <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">{href || "-"}</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-700 [overflow-wrap:anywhere]">
+        {href || "-"}
+      </p>
     </div>
   );
 }
@@ -200,7 +237,7 @@ function DetailSection({
   children,
   eyebrow,
   testId,
-  title
+  title,
 }: {
   children: ReactNode;
   eyebrow?: string;
@@ -210,9 +247,15 @@ function DetailSection({
   return (
     <section className="min-w-0" data-test-id={testId}>
       {eyebrow ? (
-        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">{eyebrow}</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+          {eyebrow}
+        </p>
       ) : null}
-      <h3 className={`${eyebrow ? "mt-1" : ""} text-base font-black text-slate-950`}>{title}</h3>
+      <h3
+        className={`${eyebrow ? "mt-1" : ""} text-base font-black text-slate-950`}
+      >
+        {title}
+      </h3>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -259,7 +302,7 @@ function EyeIcon() {
 function SourceScrapeCard({
   perPage,
   source,
-  products
+  products,
 }: {
   perPage: number;
   source: ScrapeSourceView;
@@ -272,10 +315,14 @@ function SourceScrapeCard({
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-black text-slate-950">{source.label}</h2>
+          <h2 className="text-base font-black text-slate-950">
+            {source.label}
+          </h2>
           <span
             className={`rounded-full px-2 py-1 text-[11px] font-black uppercase tracking-[0.08em] ${
-              source.isCustomUrl ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+              source.isCustomUrl
+                ? "bg-amber-100 text-amber-800"
+                : "bg-emerald-100 text-emerald-800"
             }`}
             data-test-id={`admin-scraping-source-url-mode-${source.id}`}
           >
@@ -354,18 +401,14 @@ function SourceScrapeCard({
         >
           {products.length} rows
         </span>
-        <form action={scrapeNow} data-test-id={`admin-scrape-form-${source.id}`}>
+        <form
+          action={scrapeNow}
+          data-test-id={`admin-scrape-form-${source.id}`}
+        >
           <input type="hidden" name="source" value={source.id} />
           <input type="hidden" name="page" value="1" />
           <input type="hidden" name="perPage" value={perPage} />
-          <button
-            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 text-sm font-black text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto"
-            type="submit"
-            data-test-id={`admin-scrape-now-button-${source.id}`}
-          >
-            <RefreshIcon />
-            Scrap {source.label}
-          </button>
+          <ScrapeButton sourceLabel={source.label} sourceId={source.id} />
         </form>
       </div>
     </section>
@@ -379,7 +422,7 @@ function ScrapedProductsTable({
   source,
   totalPages,
   totalProducts,
-  products
+  products,
 }: {
   currentPage: number;
   pageStart: number;
@@ -390,7 +433,9 @@ function ScrapedProductsTable({
   products: ScrapedProduct[];
 }) {
   const visibleStart = totalProducts ? pageStart + 1 : 0;
-  const visibleEnd = totalProducts ? Math.min(pageStart + products.length, totalProducts) : 0;
+  const visibleEnd = totalProducts
+    ? Math.min(pageStart + products.length, totalProducts)
+    : 0;
   const previousPage = Math.max(currentPage - 1, 1);
   const nextPage = Math.min(currentPage + 1, totalPages);
   const pageNumbers = getVisiblePageNumbers(currentPage, totalPages);
@@ -403,12 +448,21 @@ function ScrapedProductsTable({
     >
       <div className="flex flex-col gap-4 border-solid border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Scraped Data</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">{source.label} Product Table</h2>
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Scraped Data
+          </p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">
+            {source.label} Product Table
+          </h2>
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
-          <p className="text-sm font-bold text-slate-500" data-test-id={`admin-scraped-products-count-${source.id}`}>
-            {totalProducts ? `${visibleStart}-${visibleEnd} of ${totalProducts} products` : "0 products"}
+          <p
+            className="text-sm font-bold text-slate-500"
+            data-test-id={`admin-scraped-products-count-${source.id}`}
+          >
+            {totalProducts
+              ? `${visibleStart}-${visibleEnd} of ${totalProducts} products`
+              : "0 products"}
           </p>
           <BulkDeleteScrapedProductsForm
             currentPage={currentPage}
@@ -454,7 +508,10 @@ function ScrapedProductsTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto" data-test-id={`admin-scraped-products-table-wrap-${source.id}`}>
+      <div
+        className="overflow-x-auto"
+        data-test-id={`admin-scraped-products-table-wrap-${source.id}`}
+      >
         <table
           className="min-w-[1220px] divide-y divide-slate-200 text-left"
           data-test-id={`admin-scraped-products-table-${source.id}`}
@@ -464,25 +521,46 @@ function ScrapedProductsTable({
               <th className="w-12 px-4 py-3" scope="col">
                 <span className="sr-only">Select listing</span>
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Image
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Product
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Price
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Image URL
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Detail URL
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Scraped
               </th>
-              <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500" scope="col">
+              <th
+                className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                scope="col"
+              >
                 Actions
               </th>
             </tr>
@@ -494,7 +572,10 @@ function ScrapedProductsTable({
                 const productKey = getProductKey(product, absoluteIndex);
 
                 return (
-                  <tr key={`${product.detailUrl}-${productKey}`} data-test-id={`admin-scraped-product-row-${source.id}-${productKey}`}>
+                  <tr
+                    key={`${product.detailUrl}-${productKey}`}
+                    data-test-id={`admin-scraped-product-row-${source.id}-${productKey}`}
+                  >
                     <td className="px-4 py-4 align-top">
                       <input
                         aria-label={`Select ${product.title}`}
@@ -563,7 +644,13 @@ function ScrapedProductsTable({
                       <div className="flex flex-col gap-2">
                         <a
                           className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800"
-                          href={getDetailHref(source.id, product, absoluteIndex, currentPage, perPage)}
+                          href={getDetailHref(
+                            source.id,
+                            product,
+                            absoluteIndex,
+                            currentPage,
+                            perPage,
+                          )}
                           data-test-id={`admin-scraped-product-view-${source.id}-${productKey}`}
                         >
                           <EyeIcon />
@@ -584,7 +671,10 @@ function ScrapedProductsTable({
               })
             ) : (
               <tr>
-                <td className="px-4 py-10 text-center text-sm font-semibold text-slate-500" colSpan={8}>
+                <td
+                  className="px-4 py-10 text-center text-sm font-semibold text-slate-500"
+                  colSpan={8}
+                >
                   Belum ada data scraping dari {source.label}.
                 </td>
               </tr>
@@ -597,7 +687,10 @@ function ScrapedProductsTable({
         className="flex flex-col gap-3 border-solid border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
         data-test-id={`admin-scraped-products-pagination-${source.id}`}
       >
-        <p className="text-sm font-semibold text-slate-500" data-test-id={`admin-scraped-products-page-status-${source.id}`}>
+        <p
+          className="text-sm font-semibold text-slate-500"
+          data-test-id={`admin-scraped-products-page-status-${source.id}`}
+        >
           Page {currentPage} of {totalPages}
         </p>
         <nav
@@ -625,12 +718,17 @@ function ScrapedProductsTable({
 
           {pageNumbers.map((pageNumber, index) => {
             const previousPageNumber = pageNumbers[index - 1];
-            const showGap = previousPageNumber ? pageNumber - previousPageNumber > 1 : false;
+            const showGap = previousPageNumber
+              ? pageNumber - previousPageNumber > 1
+              : false;
 
             return (
               <span className="flex items-center gap-2" key={pageNumber}>
                 {showGap ? (
-                  <span className="px-1 text-xs font-black text-slate-400" aria-hidden="true">
+                  <span
+                    className="px-1 text-xs font-black text-slate-400"
+                    aria-hidden="true"
+                  >
                     ...
                   </span>
                 ) : null}
@@ -682,7 +780,7 @@ function ProductDetailModal({
   currentPage,
   perPage,
   source,
-  product
+  product,
 }: {
   currentPage: number;
   perPage: number;
@@ -703,14 +801,25 @@ function ProductDetailModal({
     >
       <BodyScrollLock />
       <div className="flex h-screen flex-col">
-        <header className="shrink-0 border-solid border-b border-slate-200 bg-white shadow-sm" data-test-id={`admin-scraped-product-detail-header-${source.id}`}>
+        <header
+          className="shrink-0 border-solid border-b border-slate-200 bg-white shadow-sm"
+          data-test-id={`admin-scraped-product-detail-header-${source.id}`}
+        >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Scraped Product Detail</p>
-              <h2 id="scraped-product-detail-title" className="mt-1 break-words text-xl font-black leading-7 text-slate-950 md:text-2xl md:leading-8">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                Scraped Product Detail
+              </p>
+              <h2
+                id="scraped-product-detail-title"
+                className="mt-1 break-words text-xl font-black leading-7 text-slate-950 md:text-2xl md:leading-8"
+              >
                 {product.title}
               </h2>
-              <div className="mt-3 flex flex-wrap gap-2" data-test-id={`admin-scraped-product-detail-badges-${source.id}`}>
+              <div
+                className="mt-3 flex flex-wrap gap-2"
+                data-test-id={`admin-scraped-product-detail-badges-${source.id}`}
+              >
                 <span className="inline-flex min-h-8 items-center rounded-lg bg-emerald-50 px-3 text-xs font-black text-emerald-800">
                   {source.label}
                 </span>
@@ -745,10 +854,19 @@ function ProductDetailModal({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto" data-test-id={`admin-scraped-product-detail-body-${source.id}`}>
+        <div
+          className="min-h-0 flex-1 overflow-y-auto"
+          data-test-id={`admin-scraped-product-detail-body-${source.id}`}
+        >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-start">
-            <aside className="flex w-full flex-col gap-4 lg:sticky lg:top-5 lg:w-80 lg:shrink-0 xl:w-96" data-test-id={`admin-scraped-product-detail-side-panel-${source.id}`}>
-              <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" data-test-id={`admin-scraped-product-detail-image-panel-${source.id}`}>
+            <aside
+              className="flex w-full flex-col gap-4 lg:sticky lg:top-5 lg:w-80 lg:shrink-0 xl:w-96"
+              data-test-id={`admin-scraped-product-detail-side-panel-${source.id}`}
+            >
+              <section
+                className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                data-test-id={`admin-scraped-product-detail-image-panel-${source.id}`}
+              >
                 <ScrapedProductImage
                   className="aspect-[4/3] w-full bg-slate-100 object-cover"
                   src={product.imageUrl}
@@ -757,42 +875,80 @@ function ProductDetailModal({
                 />
               </section>
 
-              <section className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 shadow-sm" data-test-id={`admin-scraped-product-detail-price-panel-${source.id}`}>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Price</p>
-                <p className="mt-2 break-words text-2xl font-black leading-8 text-emerald-950">{formatScrapedPrice(product)}</p>
-                <p className="mt-2 break-words text-sm font-semibold leading-6 text-emerald-800">{product.priceText || "No original price text"}</p>
+              <section
+                className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 shadow-sm"
+                data-test-id={`admin-scraped-product-detail-price-panel-${source.id}`}
+              >
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                  Price
+                </p>
+                <p className="mt-2 break-words text-2xl font-black leading-8 text-emerald-950">
+                  {formatScrapedPrice(product)}
+                </p>
+                <p className="mt-2 break-words text-sm font-semibold leading-6 text-emerald-800">
+                  {product.priceText || "No original price text"}
+                </p>
               </section>
 
-              <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-test-id={`admin-scraped-product-detail-source-panel-${source.id}`}>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Source Snapshot</p>
+              <section
+                className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+                data-test-id={`admin-scraped-product-detail-source-panel-${source.id}`}
+              >
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Source Snapshot
+                </p>
                 <dl className="mt-3 grid gap-3">
                   <div>
-                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Source</dt>
-                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">{product.sourceLabel}</dd>
+                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                      Source
+                    </dt>
+                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">
+                      {product.sourceLabel}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Scraped At</dt>
-                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">{scrapedAt}</dd>
+                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                      Scraped At
+                    </dt>
+                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">
+                      {scrapedAt}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Record ID</dt>
-                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">{formatFieldValue(product.id)}</dd>
+                    <dt className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                      Record ID
+                    </dt>
+                    <dd className="mt-1 break-words text-sm font-bold text-slate-800">
+                      {formatFieldValue(product.id)}
+                    </dd>
                   </div>
                 </dl>
               </section>
             </aside>
 
-            <main className="flex min-w-0 flex-1 flex-col gap-6" data-test-id={`admin-scraped-product-detail-main-${source.id}`}>
+            <main
+              className="flex min-w-0 flex-1 flex-col gap-6"
+              data-test-id={`admin-scraped-product-detail-main-${source.id}`}
+            >
               <DetailSection
                 eyebrow="Listing Summary"
                 testId={`admin-scraped-product-detail-overview-section-${source.id}`}
                 title="Product overview"
               >
                 <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Title</p>
-                  <p className="mt-2 break-words text-lg font-black leading-7 text-slate-950">{product.title}</p>
-                  <div className="mt-4 border-solid border-t border-slate-100 pt-4" data-test-id={`admin-scraped-product-detail-description-${source.id}`}>
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Description</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Title
+                  </p>
+                  <p className="mt-2 break-words text-lg font-black leading-7 text-slate-950">
+                    {product.title}
+                  </p>
+                  <div
+                    className="mt-4 border-solid border-t border-slate-100 pt-4"
+                    data-test-id={`admin-scraped-product-detail-description-${source.id}`}
+                  >
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      Description
+                    </p>
                     <p className="mt-2 whitespace-pre-wrap break-words text-sm font-medium leading-7 text-slate-700">
                       {product.description || "-"}
                     </p>
@@ -805,13 +961,40 @@ function ProductDetailModal({
                 testId={`admin-scraped-product-detail-fields-section-${source.id}`}
                 title="Scraped product data"
               >
-                <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3" data-test-id={`admin-scraped-product-detail-fields-${source.id}`}>
-                  <DetailField label="Record ID" testId={`admin-scraped-product-detail-id-${source.id}`} value={product.id} />
-                  <DetailField label="Source Key" testId={`admin-scraped-product-detail-source-key-${source.id}`} value={product.source} />
-                  <DetailField label="Source Label" testId={`admin-scraped-product-detail-source-label-${source.id}`} value={product.sourceLabel} />
-                  <DetailField label="Scraped At" testId={`admin-scraped-product-detail-scraped-at-${source.id}`} value={scrapedAt} />
-                  <DetailField label="Numeric Price" testId={`admin-scraped-product-detail-price-${source.id}`} value={product.price} />
-                  <DetailField label="Price Text" testId={`admin-scraped-product-detail-price-text-${source.id}`} value={product.priceText} />
+                <div
+                  className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"
+                  data-test-id={`admin-scraped-product-detail-fields-${source.id}`}
+                >
+                  <DetailField
+                    label="Record ID"
+                    testId={`admin-scraped-product-detail-id-${source.id}`}
+                    value={product.id}
+                  />
+                  <DetailField
+                    label="Source Key"
+                    testId={`admin-scraped-product-detail-source-key-${source.id}`}
+                    value={product.source}
+                  />
+                  <DetailField
+                    label="Source Label"
+                    testId={`admin-scraped-product-detail-source-label-${source.id}`}
+                    value={product.sourceLabel}
+                  />
+                  <DetailField
+                    label="Scraped At"
+                    testId={`admin-scraped-product-detail-scraped-at-${source.id}`}
+                    value={scrapedAt}
+                  />
+                  <DetailField
+                    label="Numeric Price"
+                    testId={`admin-scraped-product-detail-price-${source.id}`}
+                    value={product.price}
+                  />
+                  <DetailField
+                    label="Price Text"
+                    testId={`admin-scraped-product-detail-price-text-${source.id}`}
+                    value={product.priceText}
+                  />
                 </div>
               </DetailSection>
 
@@ -821,10 +1004,22 @@ function ProductDetailModal({
                 title="Source links"
               >
                 <div className="grid gap-3 xl:grid-cols-2">
-                  <DetailLinkField href={product.sourceUrl} label="Source URL" testId={`admin-scraped-product-detail-source-url-${source.id}`} />
-                  <DetailLinkField href={product.imageUrl} label="Image URL" testId={`admin-scraped-product-detail-image-url-${source.id}`} />
+                  <DetailLinkField
+                    href={product.sourceUrl}
+                    label="Source URL"
+                    testId={`admin-scraped-product-detail-source-url-${source.id}`}
+                  />
+                  <DetailLinkField
+                    href={product.imageUrl}
+                    label="Image URL"
+                    testId={`admin-scraped-product-detail-image-url-${source.id}`}
+                  />
                   <div className="xl:col-span-2">
-                    <DetailLinkField href={product.detailUrl} label="Detail URL" testId={`admin-scraped-product-detail-page-url-${source.id}`} />
+                    <DetailLinkField
+                      href={product.detailUrl}
+                      label="Detail URL"
+                      testId={`admin-scraped-product-detail-page-url-${source.id}`}
+                    />
                   </div>
                 </div>
               </DetailSection>
@@ -842,13 +1037,19 @@ function ProductDetailModal({
                         key={key}
                         data-test-id={`admin-scraped-product-detail-raw-${source.id}-${key}`}
                       >
-                        <dt className="break-words text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">{key}</dt>
-                        <dd className="mt-1 break-words text-sm font-bold leading-6 text-slate-800">{formatFieldValue(value)}</dd>
+                        <dt className="break-words text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                          {key}
+                        </dt>
+                        <dd className="mt-1 break-words text-sm font-bold leading-6 text-slate-800">
+                          {formatFieldValue(value)}
+                        </dd>
                       </div>
                     ))}
                   </dl>
                 ) : (
-                  <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">-</p>
+                  <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
+                    -
+                  </p>
                 )}
               </DetailSection>
             </main>
@@ -859,7 +1060,9 @@ function ProductDetailModal({
   );
 }
 
-export default async function ScrapingPage({ searchParams }: ScrapingPageProps) {
+export default async function ScrapingPage({
+  searchParams,
+}: ScrapingPageProps) {
   const params = await searchParams;
   const status = getSingleParam(params?.status);
   const message = getSingleParam(params?.message);
@@ -873,23 +1076,36 @@ export default async function ScrapingPage({ searchParams }: ScrapingPageProps) 
   const storedResult = await getStoredScrapedProducts();
   const productsBySource = scrapeSourcesResult.sources.map((source) => ({
     source,
-    products: storedResult.products.filter((product) => product.source === source.id)
+    products: storedResult.products.filter(
+      (product) => product.source === source.id,
+    ),
   }));
-  const activeSourceId = isScrapeSourceId(requestedSource) ? requestedSource : scrapeSourcesResult.sources[0]?.id;
+  const activeSourceId = isScrapeSourceId(requestedSource)
+    ? requestedSource
+    : scrapeSourcesResult.sources[0]?.id;
   const activeSourceGroup =
-    productsBySource.find(({ source }) => source.id === activeSourceId) || productsBySource[0];
+    productsBySource.find(({ source }) => source.id === activeSourceId) ||
+    productsBySource[0];
   const perPage = getPageSize(requestedPerPage);
   const totalProducts = activeSourceGroup.products.length;
   const totalPages = Math.max(1, Math.ceil(totalProducts / perPage));
   const requestedPageNumber = getPositiveInteger(requestedPage, 1);
   const currentPage = Math.min(requestedPageNumber, totalPages);
   const pageStart = (currentPage - 1) * perPage;
-  const paginatedProducts = activeSourceGroup.products.slice(pageStart, pageStart + perPage);
-  const selectedProduct = activeSourceGroup.products.find((product, index) => getProductKey(product, index) === requestedDetail);
+  const paginatedProducts = activeSourceGroup.products.slice(
+    pageStart,
+    pageStart + perPage,
+  );
+  const selectedProduct = activeSourceGroup.products.find(
+    (product, index) => getProductKey(product, index) === requestedDetail,
+  );
 
   return (
     <AdminShell activeItem="scraping">
-      <div className="flex max-w-7xl flex-col gap-5" data-test-id="admin-scraping-page">
+      <div
+        className="flex max-w-7xl flex-col gap-5"
+        data-test-id="admin-scraping-page"
+      >
         <section
           className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
           data-test-id="admin-scraping-toolbar"
@@ -902,7 +1118,8 @@ export default async function ScrapingPage({ searchParams }: ScrapingPageProps) 
               Scraped Product Candidates
             </h1>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">
-              Pilih tab sumber, jalankan scraping, lalu tinjau kandidat produk di tabel sumber tersebut.
+              Pilih tab sumber, jalankan scraping, lalu tinjau kandidat produk
+              di tabel sumber tersebut.
             </p>
           </div>
         </section>
@@ -926,7 +1143,9 @@ export default async function ScrapingPage({ searchParams }: ScrapingPageProps) 
             role="status"
           >
             {storedResult.error}
-            {storedResult.usedFallback ? " Showing local fallback data when available." : ""}
+            {storedResult.usedFallback
+              ? " Showing local fallback data when available."
+              : ""}
           </div>
         ) : null}
 
@@ -937,7 +1156,9 @@ export default async function ScrapingPage({ searchParams }: ScrapingPageProps) 
             role="status"
           >
             {scrapeSourcesResult.error}
-            {scrapeSourcesResult.usedFallback ? " Target URL settings are using defaults or local fallback." : ""}
+            {scrapeSourcesResult.usedFallback
+              ? " Target URL settings are using defaults or local fallback."
+              : ""}
           </div>
         ) : null}
 
@@ -969,7 +1190,9 @@ export default async function ScrapingPage({ searchParams }: ScrapingPageProps) 
                     <span>{source.label}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
-                        active ? "bg-white/18 text-white" : "bg-emerald-50 text-emerald-800"
+                        active
+                          ? "bg-white/18 text-white"
+                          : "bg-emerald-50 text-emerald-800"
                       }`}
                     >
                       {products.length}
