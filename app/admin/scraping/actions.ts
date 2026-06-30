@@ -239,3 +239,61 @@ export async function updateScrapedProductAction(
 
   return result;
 }
+
+export async function syncScrapedProductsAction(
+  detailUrls: string[],
+  category: string,
+  paginationParams: Record<string, string>,
+): Promise<{ error?: string }> {
+  if (!(await hasSuperadminSession())) {
+    return { error: "Unauthorized" };
+  }
+
+  if (!detailUrls.length) return { error: "No items selected." };
+  if (!category.trim()) return { error: "Category is required." };
+
+  // Import here to avoid circular deps — these are only needed at call time
+  const { createProduct, generateSlug } = await import("@/lib/products-admin");
+  const { deleteScrapedProducts, getStoredScrapedProducts } = await import("@/lib/scraping");
+
+  const { products: allScraped } = await getStoredScrapedProducts();
+  const targets = allScraped.filter((p) => detailUrls.includes(p.detailUrl));
+
+  if (!targets.length) return { error: "Selected items not found in scraped data." };
+
+  const errors: string[] = [];
+
+  for (const scraped of targets) {
+    const name = scraped.title || "Untitled";
+    const result = await createProduct({
+      name,
+      slug: generateSlug(name),
+      category: category.trim(),
+      condition: "Bekas",
+      price: scraped.price ?? 0,
+      location: "",
+      image: scraped.imageUrl || "",
+      gallery: scraped.imageUrl ? [scraped.imageUrl] : [],
+      year: "",
+      seller: scraped.sourceLabel || "",
+      description: scraped.description || scraped.title || "",
+      highlights: [],
+    });
+
+    if (result.error) {
+      errors.push(`${name}: ${result.error}`);
+    }
+  }
+
+  if (errors.length) {
+    return { error: errors.join("; ") };
+  }
+
+  // Remove synced items from scraped list
+  await deleteScrapedProducts(detailUrls);
+
+  revalidatePath("/admin/scraping");
+  revalidatePath("/admin/products");
+
+  return {};
+}

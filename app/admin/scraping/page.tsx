@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 import AdminShell from "@/app/admin/AdminShell";
 import BodyScrollLock from "@/app/admin/scraping/BodyScrollLock";
 import BulkDeleteScrapedProductsForm from "@/app/admin/scraping/BulkDeleteScrapedProductsForm";
+import BulkSyncScrapedProductsButton from "@/app/admin/scraping/BulkSyncScrapedProductsButton";
 import RemoveScrapedProductForm from "@/app/admin/scraping/RemoveScrapedProductForm";
 import ScrapedProductImage from "@/app/admin/scraping/ScrapedProductImage";
 import ScrapedProductDetailClient, { ScrapedProductPricePanel, ScrapedProductImagePanel } from "@/app/admin/scraping/ScrapedProductDetailClient";
+import SyncScrapedProductButton from "@/app/admin/scraping/SyncScrapedProductButton";
 import { saveScrapeTargetUrl, scrapeNow } from "@/app/admin/scraping/actions";
 import ScrapeButton from "@/app/admin/scraping/ScrapeButton";
-import { formatPrice } from "@/data/products";
+import { formatPrice, getCategories } from "@/data/products";
 import {
   getScrapeSources,
   getStoredScrapedProducts,
@@ -424,6 +426,7 @@ function ScrapedProductsTable({
   totalPages,
   totalProducts,
   products,
+  categories,
 }: {
   currentPage: number;
   pageStart: number;
@@ -432,6 +435,7 @@ function ScrapedProductsTable({
   totalPages: number;
   totalProducts: number;
   products: ScrapedProduct[];
+  categories: string[];
 }) {
   const visibleStart = totalProducts ? pageStart + 1 : 0;
   const visibleEnd = totalProducts
@@ -441,6 +445,11 @@ function ScrapedProductsTable({
   const nextPage = Math.min(currentPage + 1, totalPages);
   const pageNumbers = getVisiblePageNumbers(currentPage, totalPages);
   const bulkDeleteFormId = `admin-scraped-products-bulk-delete-form-${source.id}`;
+  const paginationParams: Record<string, string> = {
+    source: source.id,
+    page: String(currentPage),
+    perPage: String(perPage),
+  };
 
   return (
     <section
@@ -469,6 +478,13 @@ function ScrapedProductsTable({
             currentPage={currentPage}
             formId={bulkDeleteFormId}
             perPage={perPage}
+            sourceId={source.id}
+            visibleCount={products.length}
+          />
+          <BulkSyncScrapedProductsButton
+            formId={bulkDeleteFormId}
+            categories={categories}
+            paginationParams={paginationParams}
             sourceId={source.id}
             visibleCount={products.length}
           />
@@ -657,6 +673,12 @@ function ScrapedProductsTable({
                           <EyeIcon />
                           View
                         </a>
+                        <SyncScrapedProductButton
+                          detailUrl={product.detailUrl}
+                          title={product.title}
+                          categories={categories}
+                          paginationParams={paginationParams}
+                        />
                         <RemoveScrapedProductForm
                           currentPage={currentPage}
                           detailUrl={product.detailUrl}
@@ -960,6 +982,7 @@ export default async function ScrapingPage({
   const requestedPerPage = getSingleParam(params?.perPage);
   const scrapeSourcesResult = await getScrapeSources();
   const storedResult = await getStoredScrapedProducts();
+  const categories = await getCategories();
   const productsBySource = scrapeSourcesResult.sources.map((source) => ({
     source,
     products: storedResult.products.filter(
@@ -1109,6 +1132,7 @@ export default async function ScrapingPage({
           source={activeSourceGroup.source}
           totalPages={totalPages}
           totalProducts={totalProducts}
+          categories={categories}
         />
 
         {selectedProduct ? (
