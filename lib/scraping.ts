@@ -120,7 +120,7 @@ type SaveScrapeSourceUrlResult = {
   usedFallback: boolean;
 };
 
-const MAX_PRODUCTS_PER_SOURCE = 12;
+const MAX_PRODUCTS_PER_SOURCE = 40;
 const REQUEST_HEADERS = {
   accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -251,7 +251,7 @@ function limitText(value: string, maxLength: number) {
   return `${normalized.slice(0, maxLength - 1).trim()}...`;
 }
 
-function translateOlxUrlToApi(url: string): string {
+function translateOlxUrlToApi(url: string, page = 1): string {
   try {
     const parsedUrl = new URL(url);
 
@@ -272,7 +272,7 @@ function translateOlxUrlToApi(url: string): string {
     // Build API URL
     const apiUrl = new URL("https://www.olx.co.id/api/relevance/v4/search");
     if (locationId) apiUrl.searchParams.set("location", locationId);
-    apiUrl.searchParams.set("page", "1");
+    apiUrl.searchParams.set("page", String(page));
     if (query) apiUrl.searchParams.set("query", query);
 
     return apiUrl.toString();
@@ -1224,6 +1224,8 @@ function extractOlxApiDrafts(
     const parsed = JSON.parse(jsonText);
     const items = Array.isArray(parsed?.data) ? parsed.data : [];
 
+    console.log(`[OLX] API returned ${items.length} items`);
+
     for (const item of items) {
       if (!isRecord(item)) continue;
 
@@ -1234,15 +1236,28 @@ function extractOlxApiDrafts(
 
       if (!title || !detailUrl || title.length < 6) continue;
 
+      // OLX API price can live in several places depending on listing type
       const priceObj = isRecord(item.price) ? item.price : null;
       const priceData = isRecord(priceObj?.value) ? priceObj.value : null;
+      // price.value.raw is a number (in IDR)
       const priceRaw =
-        typeof priceData?.raw === "number" ? priceData.raw : null;
-      const priceDisplay = readString(priceData?.display);
+        typeof priceData?.raw === "number"
+          ? priceData.raw
+          : typeof priceObj?.value === "number"
+            ? (priceObj.value as number)
+            : null;
+      const priceDisplay =
+        readString(priceData?.display) ||
+        readString(priceObj?.display) ||
+        (priceRaw ? formatPriceText(priceRaw) : "");
 
       const images = Array.isArray(item.images) ? item.images : [];
       const firstImage = images[0];
       const imageUrl = readOlxImageUrl(firstImage);
+
+      if (!priceDisplay && priceRaw === null) {
+        console.log(`[OLX] Skipped (no price): "${title}" | price raw:`, JSON.stringify(item.price));
+      }
 
       drafts.push({
         source: source.id,
@@ -1252,7 +1267,7 @@ function extractOlxApiDrafts(
         title: limitText(title, 160),
         description: limitText(description || title, 320),
         price: priceRaw,
-        priceText: priceDisplay || (priceRaw ? formatPriceText(priceRaw) : ""),
+        priceText: priceDisplay,
         detailUrl,
         raw: {
           extractor: "olx-api",
@@ -1260,7 +1275,6 @@ function extractOlxApiDrafts(
       });
     }
   } catch (error) {
-    // Log JSON parse or extraction errors for debugging
     console.error(
       "OLX API extraction error:",
       error instanceof Error ? error.message : error,
@@ -1561,8 +1575,48 @@ function toScrapedProduct(
 }
 
 async function scrapeSource(source: ScrapeSource, scrapedAt: string) {
-  const fetchUrl =
-    source.id === "olx-bandung" ? translateOlxUrlToApi(source.url) : source.url;
+  if (source.id === "olx-bandung") {
+    // Fetch multiple pages until we hit the cap
+    const OLX_PAGES = 3;
+    const allDrafts: ScrapedProductDraft[] = [];
+
+    for (let page = 1; page <= OLX_PAGES && allDrafts.length < MAX_PRODUCTS_PER_SOURCE; page++) {
+      const pageUrl = translateOlxUrlToApi(source.url, page);
+      const pageResponse = await fetchHtml(pageUrl);
+
+      if (!pageResponse.html) break;
+
+      const pageDrafts = extractOlxApiDrafts(pageResponse.html, source);
+
+      if (!pageDrafts.length) break;
+
+      allDrafts.push(...pageDrafts);
+    }
+
+    const dedupedDrafts = dedupeDrafts(allDrafts).slice(0, MAX_PRODUCTS_PER_SOURCE);
+    // OLX API provides price data directly — keep drafts that have either price or priceText
+    const validDrafts = dedupedDrafts.filter(
+      (d) => (d.price != null && d.price > 0) || d.priceText,
+    );
+
+    console.log(`[OLX] Total collected: ${allDrafts.length}, after dedup: ${dedupedDrafts.length}, with price: ${validDrafts.length}`);
+    const products = validDrafts.map((draft) => toScrapedProduct(draft, scrapedAt));
+
+    return {
+      products,
+      result: {
+        source: source.id,
+        sourceLabel: source.label,
+        sourceUrl: source.url,
+        count: products.length,
+        error: products.length
+          ? undefined
+          : "No OLX listings with price were found.",
+      },
+    };
+  }
+
+  const fetchUrl = source.url;
   const response = await fetchHtml(fetchUrl);
 
   if (!response.html) {
@@ -1578,54 +1632,20 @@ async function scrapeSource(source: ScrapeSource, scrapedAt: string) {
     };
   }
 
-  // OLX uses JSON API, other sources use HTML scraping
-  const drafts =
-    source.id === "olx-bandung"
-      ? extractOlxApiDrafts(response.html, source).slice(
-          0,
-          MAX_PRODUCTS_PER_SOURCE,
-        )
-      : dedupeDrafts([
-          ...extractStructuredDrafts(response.html, source),
-          ...extractAnchorDrafts(response.html, source),
-        ]).slice(0, MAX_PRODUCTS_PER_SOURCE);
+  const drafts = dedupeDrafts([
+    ...extractStructuredDrafts(response.html, source),
+    ...extractAnchorDrafts(response.html, source),
+  ]).slice(0, MAX_PRODUCTS_PER_SOURCE);
 
-  if (source.id === "olx-bandung") {
-    console.log(`[OLX DEBUG] Drafts extracted: ${drafts.length}`);
-    if (drafts.length > 0) {
-      console.log(
-        `[OLX DEBUG] First draft:`,
-        JSON.stringify({
-          title: drafts[0].title,
-          price: drafts[0].price,
-          priceText: drafts[0].priceText,
-          imageUrl: drafts[0].imageUrl,
-          detailUrl: drafts[0].detailUrl,
-        }),
-      );
-    }
-  }
-  // Skip enrichment for OLX - API provides complete data and detail pages are protected
-  const enrichedDrafts =
-    source.id === "olx-bandung"
-      ? drafts
-      : await Promise.all(drafts.map((draft) => enrichDraft(draft, source)));
+  const enrichedDrafts = await Promise.all(
+    drafts.map((draft) => enrichDraft(draft, source)),
+  );
   const pricedDrafts = dedupeDrafts(enrichedDrafts)
     .map(ensureDraftHasRequiredPrice)
     .filter((draft): draft is ScrapedProductDraft => Boolean(draft));
-
-  if (source.id === "olx-bandung") {
-    console.log(`[OLX DEBUG] After price validation: ${pricedDrafts.length}`);
-  }
-  // Skip image reachability check for OLX - API provides valid image URLs
-  const reachableDrafts =
-    source.id === "olx-bandung"
-      ? pricedDrafts
-      : await Promise.all(
-          pricedDrafts.map((draft) =>
-            ensureDraftHasReachableImage(draft, source),
-          ),
-        );
+  const reachableDrafts = await Promise.all(
+    pricedDrafts.map((draft) => ensureDraftHasReachableImage(draft, source)),
+  );
   const products = reachableDrafts
     .filter((draft): draft is ScrapedProductDraft => Boolean(draft))
     .map((draft) => toScrapedProduct(draft, scrapedAt));
