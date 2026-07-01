@@ -62,10 +62,10 @@ export const siteConfig = {
   url: siteUrl.replace(/\/$/, ""),
   description:
     "Pojok Seken adalah marketplace barang bekas berkualitas untuk laptop, kamera, furnitur, sepeda, dan kebutuhan rumah tangga pilihan.",
-  city: "Jakarta",
+  city: "Bandung",
   country: "ID",
-  phone: "+62 812-3456-7890",
-  email: "halo@pojokseken.id"
+  phone: "+62 856-244-03415",
+  email: "info.pojokseken@gmail.com"
 };
 
 export function formatPrice(price: number) {

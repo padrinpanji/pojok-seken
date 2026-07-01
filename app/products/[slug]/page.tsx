@@ -5,7 +5,7 @@ import ProductGallery from "@/components/ProductGallery";
 import ShareListing from "@/components/ShareListing";
 import SchemaScript from "@/components/SchemaScript";
 import ProductCard from "@/components/ProductCard";
-import { CalendarIcon, ChatIcon, PinIcon, ShieldIcon, WhatsAppIcon } from "@/components/Icons";
+import { CalendarIcon, PinIcon, ShieldIcon, WhatsAppIcon } from "@/components/Icons";
 import { formatPrice, getProductBySlug, getProducts, siteConfig, slugifySeller } from "@/data/products";
 
 type ProductPageProps = {
@@ -66,10 +66,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const sameCategoryProducts = productList.filter(
     (item) => item.category === product.category && item.slug !== product.slug
   );
-  const fallbackProducts = productList.filter(
-    (item) => item.category !== product.category && item.slug !== product.slug
-  );
-  const relatedProducts = [...sameCategoryProducts, ...fallbackProducts].slice(0, 4);
+  // Shuffle and take 5
+  const relatedProducts = sameCategoryProducts
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 5);
   const sellerInitials = product.seller
     .split(" ")
     .map((word) => word[0])
@@ -80,13 +80,32 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const whatsappMessage = encodeURIComponent(
     `Halo, saya tertarik dengan ${product.name} di Pojok Seken. Apakah masih tersedia?`
   );
-  const technicalSpecs = [
+  // Category-aware safety guide
+  const safetyTip = (() => {
+    const cat = product.category.toLowerCase();
+    if (cat.includes("elektronik") || cat.includes("laptop") || cat.includes("komputer") || cat.includes("kamera"))
+      return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, uji coba perangkat secara langsung, cek kondisi fisik, port, dan baterai, serta minta bukti pembelian asli sebelum membayar.";
+    if (cat.includes("furnitur") || cat.includes("sofa") || cat.includes("furniture"))
+      return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, periksa material kain, kekuatan engsel/kaki furnitur secara langsung, dan tawar-menawar secara aman bersama penjual sebelum mentransfer dana apa pun.";
+    if (cat.includes("kendaraan") || cat.includes("motor") || cat.includes("mobil"))
+      return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, periksa kondisi mesin, dokumen kendaraan (STNK/BPKB), dan lakukan test ride/drive sebelum membayar.";
+    if (cat.includes("fashion") || cat.includes("pakaian") || cat.includes("baju"))
+      return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, periksa kondisi bahan, jahitan, dan ukuran secara langsung sebelum menyepakati harga.";
+    if (cat.includes("hobi") || cat.includes("sepeda") || cat.includes("olahraga"))
+      return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, uji coba fungsi dan kondisi fisik barang secara langsung, dan pastikan semua komponen berfungsi dengan baik sebelum membayar.";
+    if (cat.includes("properti") || cat.includes("rumah") || cat.includes("tanah"))
+      return "Pastikan Anda melakukan <b>survei langsung</b> ke lokasi, verifikasi dokumen kepemilikan (sertifikat/AJB), dan gunakan notaris terpercaya sebelum melakukan transaksi apa pun.";
+    // default
+    return "Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, periksa kondisi barang secara langsung, dan tawar-menawar secara aman bersama penjual sebelum mentransfer dana apa pun.";
+  })();
+
+  const technicalSpecs: string[][] = [
     ["Kategori", product.category],
     ["Kondisi", product.condition],
-    ["Tahun", product.year],
+    ...(product.year ? [["Tahun", product.year]] : []),
     ["Lokasi", product.location],
     ["Penjual", product.seller],
-    ["Kelengkapan", product.highlights.join(", ")]
+    ...(product.highlights.length ? [["Kelengkapan", product.highlights.join(", ")]] : []),
   ];
 
   const productSchema = {
@@ -122,6 +141,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <div className="breadcrumb">
             <Link href="/" data-test-id="product-breadcrumb-home">
               Beranda
+            </Link>
+            <span>/</span>
+            <Link href="/search" data-test-id="product-breadcrumb-search">
+              Semua Produk
             </Link>
             <span>/</span>
             <Link
@@ -160,11 +183,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               </span>
               <div>
                 <strong>Panduan Aman Berbelanja Second-Hand</strong>
-                <p>
-                  Pastikan Anda melakukan <b>Cash On Delivery (COD)</b>, memeriksa material kain,
-                  kekuatan engsel/kaki sofa secara langsung, dan tawar-menawar secara aman bersama
-                  penjual sebelum mentransfer dana apa pun.
-                </p>
+                <p dangerouslySetInnerHTML={{ __html: safetyTip }} />
               </div>
             </section>
           </div>
@@ -191,18 +210,27 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 </span>
               </div>
               <div className="detail-actions">
-                <a
-                  className="button glow"
-                  href={`https://wa.me/628123456789?text=${whatsappMessage}`}
-                  data-test-id="product-whatsapp-link"
-                >
-                  <WhatsAppIcon />
-                  Hubungi Penjual (WhatsApp)
-                </a>
-                <Link className="button secondary glow-soft" href="/contact" data-test-id="product-chat-link">
-                  <ChatIcon />
-                  Kirim Chat Langsung (Live Chat)
-                </Link>
+                {product.source_url ? (
+                  <a
+                    className="button glow"
+                    href={`${product.source_url}${product.source_url.includes("?") ? "&" : "?"}utm_source=pojok-seken&utm_medium=referral&utm_campaign=product-detail`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-test-id="product-source-link"
+                  >
+                    <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                    Kunjungi Web Asli
+                  </a>
+                ) : (
+                  <a
+                    className="button glow"
+                    href={`https://wa.me/628123456789?text=${whatsappMessage}`}
+                    data-test-id="product-whatsapp-link"
+                  >
+                    <WhatsAppIcon />
+                    Hubungi Penjual (WhatsApp)
+                  </a>
+                )}
               </div>
             </section>
 
@@ -227,12 +255,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                     <span aria-hidden="true">★★★★★</span>
                     <strong>5.0</strong>
                   </div>
-                </div>
-              </div>
-              <div className="seller-metrics" data-test-id="product-seller-metrics">
-                <div data-test-id="product-seller-sold-count">
-                  <span>Produk terjual</span>
-                  <strong>34 Unit</strong>
                 </div>
               </div>
             </section>
@@ -275,21 +297,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                     <span>{value}</span>
                   </div>
                 ))}
-                {product.source_url && (
-                  <div className="spec-table-row">
-                    <strong>Sumber</strong>
-                    <span>
-                      <a
-                        href={product.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 underline hover:text-emerald-900 break-all"
-                      >
-                        Lihat iklan asli
-                      </a>
-                    </span>
-                  </div>
-                )}
               </div>
             </section>
           </div>
