@@ -300,3 +300,16 @@ export async function deleteProduct(id: number): Promise<DeleteResult> {
     const { error } = await supabase.from("listings").delete().eq("id", id);
     return error ? { error: error.message } : {};
 }
+
+export async function bulkDeleteProducts(ids: number[]): Promise<{ deletedCount: number; error?: string }> {
+    const supabase = createSupabaseAdminClient();
+    if (!supabase) return { deletedCount: 0, error: getSupabaseAdminConfigError() };
+
+    const { error, count } = await supabase
+        .from("listings")
+        .delete({ count: "exact" })
+        .in("id", ids);
+
+    if (error) return { deletedCount: 0, error: error.message };
+    return { deletedCount: count ?? ids.length };
+}

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import AdminShell from "@/app/admin/AdminShell";
 import DeleteProductButton from "@/app/admin/products/DeleteProductButton";
+import ProductFilters from "@/app/admin/products/ProductFilters";
+import BulkDeleteProductsButton from "@/app/admin/products/BulkDeleteProductsButton";
 import { getAdminProducts } from "@/lib/products-admin";
-import { formatPrice } from "@/data/products";
+import { formatPrice, getCategories, getConditions } from "@/data/products";
 
 export const metadata: Metadata = {
     title: "Admin Products",
@@ -21,21 +24,42 @@ function getAlertClass(status: string) {
     return "border-rose-200 bg-rose-50 text-rose-950";
 }
 
-function getAlertMessage(status: string, error: string) {
+function getAlertMessage(status: string, error: string, count: string) {
     if (error) return error;
     if (status === "created") return "Product created successfully.";
     if (status === "updated") return "Product updated successfully.";
-    if (status === "deleted") return "Product deleted.";
+    if (status === "deleted") return count ? `${count} product${Number(count) > 1 ? "s" : ""} deleted.` : "Product deleted.";
     return "";
+}
+
+function str(v: string | string[] | undefined): string {
+    return Array.isArray(v) ? v[0] : (v ?? "");
 }
 
 export default async function AdminProductsPage({ searchParams }: ProductsPageProps) {
     const params = await searchParams;
-    const status = Array.isArray(params?.status) ? params.status[0] : (params?.status ?? "");
-    const error = Array.isArray(params?.error) ? params.error[0] : (params?.error ?? "");
-    const alertMessage = getAlertMessage(status, error);
+    const status = str(params?.status);
+    const error = str(params?.error);
+    const count = str(params?.count);
+    const q = str(params?.q).toLowerCase().trim();
+    const categoryFilter = str(params?.category);
+    const conditionFilter = str(params?.condition);
+    const alertMessage = getAlertMessage(status, error, count);
 
-    const { products, error: loadError } = await getAdminProducts();
+    const [{ products: allProducts, error: loadError }, categories, conditions] = await Promise.all([
+        getAdminProducts(),
+        getCategories(),
+        getConditions(),
+    ]);
+
+    const products = allProducts.filter((p) => {
+        const matchesQ = !q || [p.name, p.slug, p.seller, p.description].join(" ").toLowerCase().includes(q);
+        const matchesCategory = !categoryFilter || p.category === categoryFilter;
+        const matchesCondition = !conditionFilter || p.condition === conditionFilter;
+        return matchesQ && matchesCategory && matchesCondition;
+    });
+
+    const isFiltered = !!(q || categoryFilter || conditionFilter);
 
     return (
         <AdminShell activeItem="products">
@@ -46,7 +70,9 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                         <div>
                             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Catalog</p>
                             <h1 className="mt-1 text-2xl font-black leading-tight tracking-tight text-slate-950">Products</h1>
-                            <p className="mt-1 text-sm font-medium text-slate-500">{products.length} products</p>
+                            <p className="mt-1 text-sm font-medium text-slate-500">
+                                {isFiltered ? `${products.length} of ${allProducts.length} products` : `${allProducts.length} products`}
+                            </p>
                         </div>
                         <Link
                             href="/admin/products/new"
@@ -72,10 +98,19 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
 
                 {/* Table */}
                 <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                    {/* Filter bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                        <Suspense>
+                            <ProductFilters categories={categories} conditions={conditions} />
+                        </Suspense>
+                        <BulkDeleteProductsButton allIds={products.map((p) => p.id)} />
+                    </div>
+
                     <div className="overflow-x-auto">
                         <table className="min-w-[900px] w-full divide-y divide-slate-200 text-left">
                             <thead className="bg-slate-50">
                                 <tr>
+                                    <th className="w-10 px-4 py-3"></th>
                                     <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">Image</th>
                                     <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">Name</th>
                                     <th className="px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-500">Category</th>
@@ -88,6 +123,14 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {products.length ? products.map((product) => (
                                     <tr key={product.id}>
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="checkbox"
+                                                data-bulk-id={product.id}
+                                                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-emerald-700"
+                                                aria-label={`Select ${product.name}`}
+                                            />
+                                        </td>
                                         <td className="px-4 py-3">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
@@ -117,7 +160,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                                                     rel="noopener noreferrer"
                                                     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800"
                                                 >
-                                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
                                                     Preview
                                                 </Link>
                                                 <Link
@@ -132,8 +175,11 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={7} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">
-                                            No products yet. <Link href="/admin/products/new" className="text-emerald-700 underline">Create one</Link>.
+                                        <td colSpan={8} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">
+                                            {isFiltered
+                                                ? "No products match your filters."
+                                                : <>No products yet. <Link href="/admin/products/new" className="text-emerald-700 underline">Create one</Link>.</>
+                                            }
                                         </td>
                                     </tr>
                                 )}

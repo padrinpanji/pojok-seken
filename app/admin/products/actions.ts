@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hasSuperadminSession } from "@/lib/superadmin-auth";
-import { createProduct, updateProduct, deleteProduct, generateSlug, type ProductPayload } from "@/lib/products-admin";
+import { createProduct, updateProduct, deleteProduct, bulkDeleteProducts, generateSlug, type ProductPayload } from "@/lib/products-admin";
 
 function parsePrice(value: string): number {
     const digits = value.replace(/\D/g, "");
@@ -94,4 +94,25 @@ export async function deleteProductAction(formData: FormData) {
     revalidatePath("/admin/products");
     revalidatePath("/");
     redirect(result.error ? `/admin/products?error=${encodeURIComponent(result.error)}` : "/admin/products?status=deleted");
+}
+
+export async function bulkDeleteProductsAction(formData: FormData) {
+    if (!(await hasSuperadminSession())) redirect("/auth");
+
+    const ids = formData
+        .getAll("ids")
+        .map((v) => Number(v))
+        .filter((n) => n > 0);
+
+    if (!ids.length) redirect("/admin/products?error=No+items+selected");
+
+    const result = await bulkDeleteProducts(ids);
+
+    revalidatePath("/admin/products");
+    revalidatePath("/");
+    redirect(
+        result.error
+            ? `/admin/products?error=${encodeURIComponent(result.error)}`
+            : `/admin/products?status=deleted&count=${result.deletedCount}`,
+    );
 }
