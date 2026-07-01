@@ -275,6 +275,21 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                     <span>{value}</span>
                   </div>
                 ))}
+                {product.source_url && (
+                  <div className="spec-table-row">
+                    <strong>Sumber</strong>
+                    <span>
+                      <a
+                        href={product.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 underline hover:text-emerald-900 break-all"
+                      >
+                        Lihat iklan asli
+                      </a>
+                    </span>
+                  </div>
+                )}
               </div>
             </section>
           </div>

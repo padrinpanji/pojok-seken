@@ -285,6 +285,7 @@ export async function syncScrapedProductsAction(
       seller: sellerName,
       description: scraped.description || scraped.title || "",
       highlights: [],
+      source_url: scraped.detailUrl || undefined,
     });
 
     if (result.error) {

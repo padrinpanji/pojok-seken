@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import AdminShell from "@/app/admin/AdminShell";
 import ProductFormClient from "@/app/admin/products/ProductFormClient";
 import { updateProductAction } from "@/app/admin/products/actions";
-import { getCategories } from "@/data/products";
+import { getCategories, getConditions } from "@/data/products";
 import { getAdminProducts } from "@/lib/products-admin";
 
 export const metadata: Metadata = {
@@ -25,9 +25,10 @@ export default async function EditProductPage({ params, searchParams }: EditProd
     const id = Number(idParam);
     if (!Number.isFinite(id) || id <= 0) notFound();
 
-    const [{ products }, categories] = await Promise.all([
+    const [{ products }, categories, conditions] = await Promise.all([
         getAdminProducts(),
         getCategories(),
+        getConditions(),
     ]);
 
     const product = products.find((p) => p.id === id);
@@ -42,14 +43,24 @@ export default async function EditProductPage({ params, searchParams }: EditProd
                 <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Products</p>
                     <h1 className="mt-1 text-2xl font-black leading-tight tracking-tight text-slate-950">Edit product</h1>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <div className="mt-1 flex items-center gap-4 text-sm text-slate-500">
                         <Link href="/admin/products" className="text-emerald-700 hover:underline">← Back to products</Link>
-                    </p>
+                        <Link
+                            href={`/products/${product.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-emerald-700"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            See Preview
+                        </Link>
+                    </div>
                 </div>
                 <ProductFormClient
                     product={product}
                     action={action}
                     categories={categories}
+                    conditions={conditions}
                     error={error || undefined}
                 />
             </div>

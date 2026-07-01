@@ -13,11 +13,13 @@ export default function ProductFormClient({
     product,
     action,
     categories,
+    conditions,
     error,
 }: {
     product?: Product;
     action: (formData: FormData) => Promise<void>;
     categories: string[];
+    conditions: string[];
     error?: string;
 }) {
     const [priceDisplay, setPriceDisplay] = useState(
@@ -26,6 +28,8 @@ export default function ProductFormClient({
     const [slug, setSlug] = useState(product?.slug ?? "");
     const [nameValue, setNameValue] = useState(product?.name ?? "");
     const [imagePreview, setImagePreview] = useState(product?.image ?? "");
+    const [category, setCategory] = useState(product?.category ?? "");
+    const [condition, setCondition] = useState(product?.condition ?? "");
     const nameRef = useRef<HTMLInputElement>(null);
 
     function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -66,7 +70,7 @@ export default function ProductFormClient({
                 <div className="sm:col-span-2 xl:col-span-4">
                     <label className={labelClass} htmlFor="pf-name">Name</label>
                     <input ref={nameRef} id="pf-name" name="name" required className={`mt-1 ${inputClass}`}
-                        defaultValue={product?.name} value={nameValue} onChange={handleNameChange} placeholder="Product name" />
+                        value={nameValue} onChange={handleNameChange} placeholder="Product name" />
                 </div>
 
                 {/* Slug — full width */}
@@ -79,7 +83,7 @@ export default function ProductFormClient({
                 {/* Category */}
                 <div>
                     <label className={labelClass} htmlFor="pf-category">Category</label>
-                    <select id="pf-category" name="category" defaultValue={product?.category ?? ""}
+                    <select id="pf-category" name="category" value={category} onChange={(e) => setCategory(e.target.value)}
                         className={`mt-1 ${inputClass} cursor-pointer`}>
                         <option value="">— Select —</option>
                         {categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -89,12 +93,10 @@ export default function ProductFormClient({
                 {/* Condition */}
                 <div>
                     <label className={labelClass} htmlFor="pf-condition">Condition</label>
-                    <select id="pf-condition" name="condition" defaultValue={product?.condition ?? ""}
+                    <select id="pf-condition" name="condition" value={condition} onChange={(e) => setCondition(e.target.value)}
                         className={`mt-1 ${inputClass} cursor-pointer`}>
                         <option value="">— Select —</option>
-                        <option value="Baru">Baru</option>
-                        <option value="Bekas">Bekas</option>
-                        <option value="Refurbished">Refurbished</option>
+                        {conditions.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
 
@@ -159,6 +161,13 @@ export default function ProductFormClient({
                     <label className={labelClass} htmlFor="pf-highlights">Highlights (one per line)</label>
                     <textarea id="pf-highlights" name="highlights" rows={3} className={`mt-1 ${textareaClass}`}
                         defaultValue={product?.highlights?.join("\n")} placeholder={"Good condition\nOriginal box included"} />
+                </div>
+
+                {/* Source URL — full width */}
+                <div className="sm:col-span-2 xl:col-span-4">
+                    <label className={labelClass} htmlFor="pf-source-url">Source URL <span className="font-medium normal-case text-slate-400">(original listing)</span></label>
+                    <input id="pf-source-url" name="source_url" type="url" className={`mt-1 ${inputClass}`}
+                        defaultValue={product?.source_url ?? ""} placeholder="https://..." />
                 </div>
             </div>
 

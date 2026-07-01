@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase-admin";
+import { generateSlug } from "@/lib/products-admin";
 
 export type Category = {
     id: number;
@@ -30,7 +31,8 @@ export async function createCategory(name: string): Promise<MutationResult> {
     const supabase = createSupabaseAdminClient();
     if (!supabase) return { error: getSupabaseAdminConfigError() };
 
-    const { error } = await supabase.from("categories").insert({ name: name.trim() });
+    const slug = generateSlug(name);
+    const { error } = await supabase.from("categories").insert({ name: name.trim(), slug });
 
     return error ? { error: error.message } : {};
 }
@@ -39,9 +41,10 @@ export async function updateCategory(id: number, name: string): Promise<Mutation
     const supabase = createSupabaseAdminClient();
     if (!supabase) return { error: getSupabaseAdminConfigError() };
 
+    const slug = generateSlug(name);
     const { error } = await supabase
         .from("categories")
-        .update({ name: name.trim() })
+        .update({ name: name.trim(), slug })
         .eq("id", id);
 
     return error ? { error: error.message } : {};

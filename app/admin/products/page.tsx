@@ -112,6 +112,15 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <Link
+                                                    href={`/products/${product.slug}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800"
+                                                >
+                                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    Preview
+                                                </Link>
+                                                <Link
                                                     href={`/admin/products/${product.id}/edit`}
                                                     className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800"
                                                 >

@@ -41,6 +41,7 @@ create table public.listings (
   production_year text not null,
   description text not null,
   is_active boolean not null default true,
+  source_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -116,7 +117,8 @@ select
   listings.production_year as year,
   sellers.store_name as seller,
   listings.description,
-  coalesce(listing_highlight_values.highlights, array[]::text[]) as highlights
+  coalesce(listing_highlight_values.highlights, array[]::text[]) as highlights,
+  listings.source_url
 from public.listings
 join public.categories on categories.id = listings.category_id
 join public.sellers on sellers.id = listings.seller_id

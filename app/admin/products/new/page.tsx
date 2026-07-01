@@ -3,7 +3,7 @@ import Link from "next/link";
 import AdminShell from "@/app/admin/AdminShell";
 import ProductFormClient from "@/app/admin/products/ProductFormClient";
 import { createProductAction } from "@/app/admin/products/actions";
-import { getCategories } from "@/data/products";
+import { getCategories, getConditions } from "@/data/products";
 
 export const metadata: Metadata = {
     title: "New Product",
@@ -17,7 +17,7 @@ type NewProductPageProps = {
 export default async function NewProductPage({ searchParams }: NewProductPageProps) {
     const params = await searchParams;
     const error = Array.isArray(params?.error) ? params.error[0] : (params?.error ?? "");
-    const categories = await getCategories();
+    const [categories, conditions] = await Promise.all([getCategories(), getConditions()]);
 
     return (
         <AdminShell activeItem="products">
@@ -32,6 +32,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
                 <ProductFormClient
                     action={createProductAction}
                     categories={categories}
+                    conditions={conditions}
                     error={error || undefined}
                 />
             </div>

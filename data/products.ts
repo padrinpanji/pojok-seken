@@ -15,6 +15,7 @@ export type Product = {
   seller: string;
   description: string;
   highlights: string[];
+  source_url?: string | null;
 };
 
 export type SellerProfile = {
@@ -49,6 +50,7 @@ type SupabaseProductRow = {
   seller: string | null;
   description: string | null;
   highlights: string[] | string | null;
+  source_url?: string | null;
 };
 
 const siteUrl =
@@ -136,7 +138,8 @@ function mapSupabaseProduct(row: SupabaseProductRow): Product | null {
     year: String(row.year || ""),
     seller: row.seller,
     description: row.description || "",
-    highlights: parseTextList(row.highlights, [])
+    highlights: parseTextList(row.highlights, []),
+    source_url: row.source_url ?? null,
   };
 }
 
@@ -158,6 +161,24 @@ export const getCategories = cache(async (): Promise<string[]> => {
     .filter((name): name is string => Boolean(name));
 });
 
+export const getConditions = cache(async (): Promise<string[]> => {
+  const supabase = createSupabaseClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase.from("listing_conditions").select("name").order("id", { ascending: true });
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  return (data as { name: string | null }[])
+    .map((row) => row.name)
+    .filter((name): name is string => Boolean(name));
+});
+
 export const getProducts = cache(async (): Promise<Product[]> => {
   const supabase = createSupabaseClient();
 
@@ -167,7 +188,7 @@ export const getProducts = cache(async (): Promise<Product[]> => {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights")
+    .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url")
     .order("id", { ascending: true });
 
   if (error || !data?.length) {

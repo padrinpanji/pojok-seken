@@ -15,13 +15,15 @@ export type ProductPayload = {
     seller: string;
     description: string;
     highlights: string[];
+    source_url?: string;
 };
 
 type MutationResult = { error?: string; product?: Product };
 type DeleteResult = { error?: string };
 
 export function generateSlug(value: string) {
-    return value
+    // Try latin-friendly slug first
+    const latinSlug = value
         .toLowerCase()
         .trim()
         .normalize("NFKD")
@@ -29,6 +31,19 @@ export function generateSlug(value: string) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 120);
+
+    if (latinSlug) return latinSlug;
+
+    // Fallback: keep alphanumeric from original (handles non-latin scripts)
+    const fallback = value
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 120);
+
+    return fallback || `item-${Date.now()}`;
 }
 
 // ─── Lookup / upsert helpers ──────────────────────────────────────────────────
@@ -44,6 +59,7 @@ async function resolveCategoryId(supabase: NonNullable<ReturnType<typeof createS
 
     // Create if missing
     const slug = generateSlug(name);
+    if (!slug) return null;
     const { data: created } = await supabase
         .from("categories")
         .insert({ name: name.trim(), slug })
@@ -155,7 +171,7 @@ export async function getAdminProducts(): Promise<{ products: Product[]; error?:
 
     const { data, error } = await supabase
         .from("products")
-        .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights")
+        .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url")
         .order("id", { ascending: false });
 
     if (error) return { products: [], error: error.message };
@@ -175,6 +191,7 @@ export async function getAdminProducts(): Promise<{ products: Product[]; error?:
             seller: row.seller ?? "",
             description: row.description ?? "",
             highlights: Array.isArray(row.highlights) ? row.highlights : [],
+            source_url: (row as { source_url?: string | null }).source_url ?? null,
         })),
     };
 }
@@ -210,6 +227,7 @@ export async function createProduct(payload: ProductPayload): Promise<MutationRe
             location: payload.location || "Indonesia",
             production_year: payload.year || "",
             description: payload.description || "",
+            ...(payload.source_url ? { source_url: payload.source_url } : {}),
         })
         .select("id")
         .single();
@@ -238,6 +256,7 @@ export async function updateProduct(id: number, payload: Partial<ProductPayload>
     if (payload.location !== undefined) dbPayload.location = payload.location;
     if (payload.year !== undefined) dbPayload.production_year = payload.year;
     if (payload.description !== undefined) dbPayload.description = payload.description;
+    if (payload.source_url !== undefined) dbPayload.source_url = payload.source_url || null;
 
     if (payload.category !== undefined) {
         const categoryId = await resolveCategoryId(supabase, payload.category);

@@ -41,6 +41,7 @@ function buildPayload(formData: FormData): ProductPayload {
         seller: String(formData.get("seller") ?? "").trim(),
         description: String(formData.get("description") ?? "").trim(),
         highlights: parseLines(String(formData.get("highlights") ?? "")),
+        source_url: String(formData.get("source_url") ?? "").trim() || undefined,
     };
 }
 
