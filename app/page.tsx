@@ -17,8 +17,8 @@ export default async function HomePage() {
   const categories = await getCategories();
   const productList = await getProducts();
   const featuredProducts = productList.slice(0, 3);
-  const heroProduct = productList[0];
-  const freshProducts = productList.slice(1, 5);
+  const heroProduct = productList.find((p) => p.is_featured) ?? null;
+  const freshProducts = productList.filter((p) => p.id !== heroProduct?.id).slice(0, 4);
   const itemListSchema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -67,9 +67,9 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="hero-panel" aria-label="Produk utama minggu ini">
-            <span className="hero-panel-label">Produk utama minggu ini</span>
-            {heroProduct ? (
+          {heroProduct && (
+            <div className="hero-panel" aria-label="Produk utama minggu ini">
+              <span className="hero-panel-label">Produk utama minggu ini</span>
               <div className="hero-product" data-test-id="home-highlight-product">
                 <div className="hero-product-media">
                   <img src={heroProduct.image} alt={`${heroProduct.name} di ${heroProduct.location}`} />
@@ -89,13 +89,8 @@ export default async function HomePage() {
                   </Link>
                 </div>
               </div>
-            ) : (
-              <div className="empty-state" data-test-id="home-empty-highlight">
-                <h2>Belum ada listing aktif</h2>
-                <p>Tambahkan data di Supabase agar produk muncul di halaman ini.</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -170,6 +170,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 images={product.gallery}
                 fallbackImage={product.image}
                 productName={product.name}
+                isVerified={product.is_verified}
               />
               <div className="gallery-caption">
                 <span>{product.name} - foto produk detail</span>

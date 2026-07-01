@@ -16,6 +16,8 @@ export type ProductPayload = {
     description: string;
     highlights: string[];
     source_url?: string;
+    is_verified?: boolean;
+    is_featured?: boolean;
 };
 
 type MutationResult = { error?: string; product?: Product };
@@ -171,7 +173,7 @@ export async function getAdminProducts(): Promise<{ products: Product[]; error?:
 
     const { data, error } = await supabase
         .from("products")
-        .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url")
+        .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url, is_verified, is_featured")
         .order("id", { ascending: false });
 
     if (error) return { products: [], error: error.message };
@@ -191,7 +193,9 @@ export async function getAdminProducts(): Promise<{ products: Product[]; error?:
             seller: row.seller ?? "",
             description: row.description ?? "",
             highlights: Array.isArray(row.highlights) ? row.highlights : [],
-            source_url: (row as { source_url?: string | null }).source_url ?? null,
+            source_url: (row as { source_url?: string | null; is_verified?: boolean | null; is_featured?: boolean | null }).source_url ?? null,
+            is_verified: (row as { source_url?: string | null; is_verified?: boolean | null; is_featured?: boolean | null }).is_verified ?? false,
+            is_featured: (row as { source_url?: string | null; is_verified?: boolean | null; is_featured?: boolean | null }).is_featured ?? false,
         })),
     };
 }
@@ -228,6 +232,8 @@ export async function createProduct(payload: ProductPayload): Promise<MutationRe
             production_year: payload.year || "",
             description: payload.description || "",
             ...(payload.source_url ? { source_url: payload.source_url } : {}),
+            is_verified: payload.is_verified ?? false,
+            is_featured: payload.is_featured ?? false,
         })
         .select("id")
         .single();
@@ -257,6 +263,8 @@ export async function updateProduct(id: number, payload: Partial<ProductPayload>
     if (payload.year !== undefined) dbPayload.production_year = payload.year;
     if (payload.description !== undefined) dbPayload.description = payload.description;
     if (payload.source_url !== undefined) dbPayload.source_url = payload.source_url || null;
+    if (payload.is_verified !== undefined) dbPayload.is_verified = payload.is_verified;
+    if (payload.is_featured !== undefined) dbPayload.is_featured = payload.is_featured;
 
     if (payload.category !== undefined) {
         const categoryId = await resolveCategoryId(supabase, payload.category);

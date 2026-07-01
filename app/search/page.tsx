@@ -4,6 +4,7 @@ import ProductCard from "@/components/ProductCard";
 import SchemaScript from "@/components/SchemaScript";
 import { MapIcon, SearchIcon, ShieldIcon } from "@/components/Icons";
 import { formatPrice, getCategories, getProducts, siteConfig, type Product } from "@/data/products";
+import PriceRangeInputs from "@/app/search/PriceRangeInputs";
 
 export const metadata: Metadata = {
   title: "Search Barang Bekas",
@@ -66,7 +67,7 @@ function filterProducts({
     const matchesMinPrice = !minPrice || product.price >= minPrice;
     const matchesMaxPrice = !maxPrice || product.price <= maxPrice;
     const matchesYear = !minimumYear || Number(product.year) >= minimumYear;
-    const matchesVerified = !verified || product.id % 2 === 1;
+    const matchesVerified = !verified || product.is_verified === true;
 
     return (
       matchesQuery &&
@@ -125,7 +126,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   });
   const results = sortProducts(filteredProducts, sort);
   const conditions = [...new Set(productList.map((product) => product.condition))];
-  const locations = [...new Set(productList.map((product) => product.location))];
+  const locations = [...new Set(productList.map((product) => product.location))]
+    .filter((loc) => loc && loc.toLowerCase() !== "indonesia")
+    .sort();
+  const years = [...new Set(productList.map((product) => product.year))]
+    .filter((y) => y && !isNaN(Number(y)))
+    .sort((a, b) => Number(b) - Number(a));
   const minimumProductPrice = productList.length
     ? Math.min(...productList.map((product) => product.price))
     : 0;
@@ -256,6 +262,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <div className="filter-group">
                   <label htmlFor="search-location">Lokasi</label>
                   <select
+                    key={location}
                     id="search-location"
                     name="location"
                     defaultValue={location}
@@ -270,42 +277,31 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   </select>
                 </div>
 
-                <div className="filter-group">
-                  <label>Rentang harga</label>
-                  <input
-                    type="number"
-                    name="minPrice"
-                    placeholder="Harga min"
-                    defaultValue={minPrice || ""}
-                    data-test-id="search-min-price-input"
-                  />
-                  <input
-                    type="number"
-                    name="maxPrice"
-                    placeholder="Harga maks"
-                    defaultValue={maxPrice || ""}
-                    data-test-id="search-max-price-input"
-                  />
-                </div>
+                <PriceRangeInputs
+                    key={`${minPrice ?? ""}-${maxPrice ?? ""}`}
+                    defaultMinPrice={minPrice}
+                    defaultMaxPrice={maxPrice}
+                />
 
                 <div className="filter-group">
                   <label htmlFor="search-min-year">Tahun rilis</label>
                   <select
+                    key={minYear}
                     id="search-min-year"
                     name="minYear"
                     defaultValue={minYear}
                     data-test-id="search-min-year-select"
                   >
                     <option value="">Semua tahun</option>
-                    <option value="2023">2023 ke atas</option>
-                    <option value="2021">2021 ke atas</option>
-                    <option value="2020">2020 ke atas</option>
-                    <option value="2018">2018 ke atas</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y} ke atas</option>
+                    ))}
                   </select>
                 </div>
 
                 <label className="check-filter" data-test-id="search-verified-filter">
                   <input
+                    key={String(verified)}
                     type="checkbox"
                     name="verified"
                     value="true"
@@ -330,8 +326,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <input type="hidden" name="condition" defaultValue={condition} />
                   <input type="hidden" name="location" defaultValue={location} />
                   <input type="hidden" name="minPrice" defaultValue={minPrice || ""} />
-                  <input type="hidden" name="maxPrice" defaultValue={maxPrice || ""} />
-                  <input type="hidden" name="minYear" defaultValue={minYear} />
+                  <input type="hidden" name="maxPrice" defaultValue={maxPrice || ""} />                  <input type="hidden" name="minYear" defaultValue={minYear} />
                   {verified ? <input type="hidden" name="verified" defaultValue="true" /> : null}
                   <div>
                     <p className="eyebrow">{results.length} produk ditemukan</p>
@@ -387,7 +382,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               tahun, harga, serta detail penjual sebelum melanjutkan transaksi.
             </p>
             <div className="info-stats">
-              <span>{formatPrice(minimumProductPrice)} harga mulai</span>
+              <span>harga mulai {formatPrice(minimumProductPrice)}</span>
               <span>{categories.length} kategori</span>
               <span>{locations.length} lokasi</span>
             </div>

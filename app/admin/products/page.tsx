@@ -60,6 +60,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     });
 
     const isFiltered = !!(q || categoryFilter || conditionFilter);
+    const featuredProducts = allProducts.filter((p) => p.is_featured);
 
     return (
         <AdminShell activeItem="products">
@@ -95,6 +96,37 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
                         {loadError}
                     </div>
                 ) : null}
+
+                {/* Featured / Hero section */}
+                {featuredProducts.length > 0 && (
+                    <section className="overflow-hidden rounded-lg border border-emerald-200 bg-emerald-50 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-emerald-200 px-4 py-3">
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex h-5 items-center rounded-full bg-emerald-700 px-2 text-[10px] font-black uppercase tracking-widest text-white">Hero</span>
+                                <p className="text-sm font-black text-emerald-900">Produk Utama Homepage</p>
+                            </div>
+                            <p className="text-xs font-medium text-emerald-700">{featuredProducts.length} produk ditampilkan di hero</p>
+                        </div>
+                        <div className="divide-y divide-emerald-100">
+                            {featuredProducts.map((product) => (
+                                <div key={product.id} className="flex items-center gap-4 px-4 py-3">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={product.image} alt={product.name} className="h-10 w-10 rounded-lg border border-emerald-200 object-cover bg-white" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-black text-slate-950">{product.name}</p>
+                                        <p className="text-xs font-medium text-slate-500">{product.category} · {formatPrice(product.price)}</p>
+                                    </div>
+                                    <Link
+                                        href={`/admin/products/${product.id}/edit`}
+                                        className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 text-xs font-black text-emerald-800 transition hover:bg-emerald-100"
+                                    >
+                                        Edit
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* Table */}
                 <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">

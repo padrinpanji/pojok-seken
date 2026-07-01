@@ -16,6 +16,8 @@ export type Product = {
   description: string;
   highlights: string[];
   source_url?: string | null;
+  is_verified?: boolean;
+  is_featured?: boolean;
 };
 
 export type SellerProfile = {
@@ -51,6 +53,8 @@ type SupabaseProductRow = {
   description: string | null;
   highlights: string[] | string | null;
   source_url?: string | null;
+  is_verified?: boolean | null;
+  is_featured?: boolean | null;
 };
 
 const siteUrl =
@@ -140,6 +144,8 @@ function mapSupabaseProduct(row: SupabaseProductRow): Product | null {
     description: row.description || "",
     highlights: parseTextList(row.highlights, []),
     source_url: row.source_url ?? null,
+    is_verified: row.is_verified ?? false,
+    is_featured: row.is_featured ?? false,
   };
 }
 
@@ -188,7 +194,7 @@ export const getProducts = cache(async (): Promise<Product[]> => {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url")
+    .select("id, slug, name, category, condition, price, location, image, gallery, year, seller, description, highlights, source_url, is_verified, is_featured")
     .order("id", { ascending: true });
 
   if (error || !data?.length) {

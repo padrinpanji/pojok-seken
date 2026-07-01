@@ -169,6 +169,44 @@ export default function ProductFormClient({
                     <input id="pf-source-url" name="source_url" type="url" className={`mt-1 ${inputClass}`}
                         defaultValue={product?.source_url ?? ""} placeholder="https://..." />
                 </div>
+
+                {/* Verified toggle — full width */}
+                <div className="sm:col-span-2 xl:col-span-4">
+                    <label className="flex cursor-pointer items-center gap-3">
+                        <input type="hidden" name="is_verified" value="false" />
+                        <input
+                            id="pf-is-verified"
+                            name="is_verified"
+                            type="checkbox"
+                            value="true"
+                            defaultChecked={product?.is_verified ?? false}
+                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-emerald-700"
+                        />
+                        <span className="text-sm font-black text-slate-700">
+                            Unit Terverifikasi
+                            <span className="ml-1.5 text-xs font-medium text-slate-400">tampilkan badge verifikasi di halaman produk</span>
+                        </span>
+                    </label>
+                </div>
+
+                {/* Featured toggle — full width */}
+                <div className="sm:col-span-2 xl:col-span-4">
+                    <label className="flex cursor-pointer items-center gap-3">
+                        <input type="hidden" name="is_featured" value="false" />
+                        <input
+                            id="pf-is-featured"
+                            name="is_featured"
+                            type="checkbox"
+                            value="true"
+                            defaultChecked={product?.is_featured ?? false}
+                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-emerald-700"
+                        />
+                        <span className="text-sm font-black text-slate-700">
+                            Produk Utama (Hero)
+                            <span className="ml-1.5 text-xs font-medium text-slate-400">tampilkan di hero homepage sebagai produk unggulan</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
