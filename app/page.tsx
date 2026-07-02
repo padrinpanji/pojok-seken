@@ -2,7 +2,7 @@ import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import SchemaScript from "@/components/SchemaScript";
 import { MapIcon, SearchIcon, ShieldIcon, SparkIcon } from "@/components/Icons";
-import { categories, formatPrice, products, siteConfig } from "@/data/products";
+import { formatPrice, getCategories, getProducts, siteConfig } from "@/data/products";
 
 const categoryIconIds: Record<string, string> = {
   Elektronik: "category-electronics",
@@ -13,10 +13,12 @@ const categoryIconIds: Record<string, string> = {
   Kendaraan: "category-vehicle"
 };
 
-export default function HomePage() {
-  const featuredProducts = products.slice(0, 3);
-  const heroProduct = products[0];
-  const freshProducts = products.slice(1, 5);
+export default async function HomePage() {
+  const categories = await getCategories();
+  const productList = await getProducts();
+  const featuredProducts = productList.slice(0, 3);
+  const heroProduct = productList.find((p) => p.is_featured) ?? null;
+  const freshProducts = productList.filter((p) => p.id !== heroProduct?.id).slice(0, 4);
   const itemListSchema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -59,34 +61,36 @@ export default function HomePage() {
               </button>
             </form>
             <div className="hero-proof" aria-label="Ringkasan marketplace Pojok Seken">
-              <span>{products.length}+ listing aktif</span>
+              <span>{productList.length}+ listing aktif</span>
               <span>{categories.length} kategori populer</span>
               <span>Penjual lokal terverifikasi</span>
             </div>
           </div>
 
-          <div className="hero-panel" aria-label="Produk utama minggu ini">
-            <span className="hero-panel-label">Produk utama minggu ini</span>
-            <div className="hero-product" data-test-id="home-highlight-product">
-              <div className="hero-product-media">
-                <img src={heroProduct.image} alt={`${heroProduct.name} di ${heroProduct.location}`} />
-                <span>{heroProduct.condition}</span>
-              </div>
-              <div className="hero-product-body">
-                <div className="hero-product-meta">
+          {heroProduct && (
+            <div className="hero-panel" aria-label="Produk utama minggu ini">
+              <span className="hero-panel-label">Produk utama minggu ini</span>
+              <div className="hero-product" data-test-id="home-highlight-product">
+                <div className="hero-product-media">
+                  <img src={heroProduct.image} alt={`${heroProduct.name} di ${heroProduct.location}`} />
                   <span>{heroProduct.condition}</span>
-                  <span>{heroProduct.location}</span>
                 </div>
-                <strong>{heroProduct.name}</strong>
-                <p>{formatPrice(heroProduct.price)}</p>
-              </div>
-              <div className="hero-actions" data-test-id="home-hero-actions">
-                <Link className="button glow" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
-                  Lihat Detail
-                </Link>
+                <div className="hero-product-body">
+                  <div className="hero-product-meta">
+                    <span>{heroProduct.condition}</span>
+                    <span>{heroProduct.location}</span>
+                  </div>
+                  <strong>{heroProduct.name}</strong>
+                  <p>{formatPrice(heroProduct.price)}</p>
+                </div>
+                <div className="hero-actions" data-test-id="home-hero-actions">
+                  <Link className="button glow" href={`/products/${heroProduct.slug}`} data-test-id="home-hero-product">
+                    Lihat Detail
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -119,11 +123,19 @@ export default function HomePage() {
               Lihat semua
             </Link>
           </div>
-          <div className="grid">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {featuredProducts.length > 0 ? (
+            <div className="grid">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state" data-test-id="home-featured-empty">
+              <SearchIcon />
+              <h2>Produk belum tersedia</h2>
+              <p>Data produk akan tampil otomatis setelah tabel Supabase terisi.</p>
+            </div>
+          )}
         </div>
       </section>
 

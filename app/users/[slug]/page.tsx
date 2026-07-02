@@ -13,15 +13,17 @@ type UserProfilePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export function generateStaticParams() {
-  return getSellerProfiles().map((seller) => ({
+export async function generateStaticParams() {
+  const sellers = await getSellerProfiles();
+
+  return sellers.map((seller) => ({
     slug: seller.slug
   }));
 }
 
 export async function generateMetadata({ params }: UserProfilePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const seller = getSellerBySlug(slug);
+  const seller = await getSellerBySlug(slug);
 
   if (!seller) {
     return {
@@ -61,7 +63,7 @@ function getSingleParam(value: string | string[] | undefined) {
 export default async function UserProfilePage({ params, searchParams }: UserProfilePageProps) {
   const { slug } = await params;
   const queryParams = await searchParams;
-  const seller = getSellerBySlug(slug);
+  const seller = await getSellerBySlug(slug);
 
   if (!seller) {
     notFound();

@@ -7,9 +7,10 @@ type ProductGalleryProps = {
   images: string[];
   fallbackImage: string;
   productName: string;
+  isVerified?: boolean;
 };
 
-export default function ProductGallery({ images, fallbackImage, productName }: ProductGalleryProps) {
+export default function ProductGallery({ images, fallbackImage, productName, isVerified }: ProductGalleryProps) {
   const galleryImages = images.length > 0 ? images : [fallbackImage];
   const [activeIndex, setActiveIndex] = useState(0);
   const activeImage = galleryImages[activeIndex] || fallbackImage;
@@ -18,7 +19,7 @@ export default function ProductGallery({ images, fallbackImage, productName }: P
     <>
       <div className="detail-main-image">
         <img src={activeImage} alt={`${productName} - foto produk utama ${activeIndex + 1}`} />
-        <span className="verified-ribbon" data-test-id="product-verified-ribbon">
+        <span className="verified-ribbon" data-test-id="product-verified-ribbon" style={{ display: isVerified ? undefined : "none" }}>
           <span className="verified-ribbon-icon" aria-hidden="true">
             <CheckIcon />
           </span>

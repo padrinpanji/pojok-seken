@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import NavigationProgress from "@/components/NavigationProgress";
 import SchemaScript from "@/components/SchemaScript";
 import { siteConfig } from "@/data/products";
 
@@ -105,6 +106,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="id">
       <body>
         <SchemaScript data={[organizationSchema, websiteSchema]} />
+        <NavigationProgress />
         <Header />
         <main>{children}</main>
         <Footer />
