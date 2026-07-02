@@ -36,7 +36,7 @@ create table public.listings (
   category_id bigint not null references public.categories (id) on update cascade on delete restrict,
   seller_id bigint not null references public.sellers (id) on update cascade on delete restrict,
   condition_id bigint not null references public.listing_conditions (id) on update cascade on delete restrict,
-  price integer not null check (price >= 0),
+  price bigint not null check (price >= 0),
   location text not null,
   production_year text not null,
   description text not null,

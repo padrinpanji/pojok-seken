@@ -289,8 +289,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="search-layout">
               {/* Ads slot */}
               <aside className="search-ads-slot" aria-label="Iklan" data-test-id="search-ads-slot">
-                <div className="ads-placeholder">
-                  <span>Sidebar Ads Search Slot Available</span>
+                <div className="ads-placeholder p-2 text-center">
+                  <span>Search Sidebar Ads Slot Available</span>
                 </div>
               </aside>
 
