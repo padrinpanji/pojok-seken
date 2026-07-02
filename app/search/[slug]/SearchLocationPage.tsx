@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import SearchPageContent from "@/app/search/SearchPageContent";
 import { getCategories, getProducts } from "@/data/products";
 import {
+  categoryFromSlug,
   getNumberParam,
   getSearchResultsTitle,
   getArrayParam,
@@ -11,12 +12,16 @@ import {
 
 type Props = {
   slug: string;
+  categorySlug?: string;
   searchParams?: Record<string, string | string[] | undefined>;
 };
 
-export default async function SearchLocationPage({ slug, searchParams }: Props) {
+export default async function SearchLocationPage({ slug, categorySlug, searchParams }: Props) {
   const locationLabel = slugToLocation(slug);
   const [categories, productList] = await Promise.all([getCategories(), getProducts()]);
+  const availableCategories = categories.length
+    ? categories
+    : [...new Set(productList.map((product) => product.category).filter(Boolean))];
   const locations = [
     ...new Set(productList.map((product) => product.location).filter(Boolean)),
   ].sort();
@@ -26,9 +31,15 @@ export default async function SearchLocationPage({ slug, searchParams }: Props) 
 
   if (!matchedLocation) notFound();
 
+  const matchedCategory = categorySlug
+    ? categoryFromSlug(categorySlug, availableCategories)
+    : getSingleParam(searchParams?.category);
+
+  if (categorySlug && matchedCategory === undefined) notFound();
+
   const filters = {
     q: getArrayParam(searchParams?.q),
-    category: getSingleParam(searchParams?.category),
+    category: matchedCategory || "",
     condition: getSingleParam(searchParams?.condition),
     locations: [matchedLocation],
     sort: getSingleParam(searchParams?.sort) || "default",
@@ -39,13 +50,13 @@ export default async function SearchLocationPage({ slug, searchParams }: Props) 
   };
 
   return (
-    <SearchPageContent
-      categories={categories}
+      <SearchPageContent
+      categories={availableCategories}
       productList={productList}
       filters={filters}
       schema={{
         name: `Barang Seken di ${matchedLocation}`,
-        url: `/search/${slug}`,
+        url: categorySlug ? `/search/${categorySlug}/${slug}` : `/search/${slug}`,
         about: `Jual beli barang bekas berkualitas di ${matchedLocation}`,
       }}
       breadcrumbs={[

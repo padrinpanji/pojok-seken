@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { type Product } from "@/data/products";
 
 export const LOCATION_SLUG_PREFIX = "barang-seken-di-";
+export const ALL_CATEGORY_SLUG = "all";
 export const SEARCH_SEO_YEAR = new Date().getFullYear();
 
 export const SEARCH_KEYWORDS = [
@@ -37,6 +39,35 @@ export function getNumberParam(value: string | string[] | undefined) {
   return Number.isFinite(number) && number > 0 ? number : undefined;
 }
 
+export function hasSearchFilters(params?: Record<string, string | string[] | undefined>) {
+  return Object.values(params || {}).some((value) => {
+    if (Array.isArray(value)) return value.some(Boolean);
+
+    return Boolean(value);
+  });
+}
+
+export function getSearchRobots(shouldIndex: boolean): Metadata["robots"] {
+  if (!shouldIndex) {
+    return {
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    };
+  }
+
+  return {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  };
+}
+
 export function slugToLocation(slug: string): string {
   const raw = slug.replace(LOCATION_SLUG_PREFIX, "").replace(/-/g, " ");
   return raw.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -44,6 +75,16 @@ export function slugToLocation(slug: string): string {
 
 export function locationToSlug(location: string): string {
   return LOCATION_SLUG_PREFIX + location.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+export function categoryToSlug(category: string) {
+  return category.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+export function categoryFromSlug(slug: string, categories: string[]) {
+  if (slug === ALL_CATEGORY_SLUG) return "";
+
+  return categories.find((category) => categoryToSlug(category) === slug);
 }
 
 export function formatLocationList(locations: string[]) {
@@ -58,39 +99,63 @@ export function formatKeywordList(keywords: string[]) {
   return formatLocationList(quotedKeywords);
 }
 
-export function getSearchResultsTitle({ q, locations }: Pick<ProductFilters, "q" | "locations">) {
+function getCategoryLabel(category?: string) {
+  return category || "Properti";
+}
+
+export function getSearchResultsTitle({
+  q,
+  locations,
+  category,
+}: Pick<ProductFilters, "q" | "locations" | "category">) {
   const keywords = q.map((keyword) => keyword.trim()).filter(Boolean);
   const locationText = formatLocationList(locations);
   const keywordText = formatKeywordList(keywords);
+  const titleSubject = `${getCategoryLabel(category)} Seken`;
 
   if (locationText && keywordText) {
-    return `Properti Seken di ${locationText} dengan kata kunci ${keywordText}`;
+    return `${titleSubject} di ${locationText} dengan kata kunci ${keywordText}`;
   }
 
-  if (locationText) return `Properti Seken di ${locationText}`;
-  if (keywordText) return `Properti Seken dengan kata kunci ${keywordText}`;
+  if (locationText) return `${titleSubject} di ${locationText}`;
+  if (keywordText) return `${titleSubject} dengan kata kunci ${keywordText}`;
+  if (category) return titleSubject;
 
   return "Semua produk";
 }
 
-export function getSearchMetadataDescription(location?: string) {
+export function getSearchMetadataDescription(location?: string, category?: string) {
   if (location) {
-    return `Cari barang bekas berkualitas di ${location}. Temukan properti, elektronik, furnitur, dan produk seken terpercaya di Pojok Seken.`;
+    const productText = category ? `${category.toLowerCase()} bekas` : "barang bekas";
+
+    return `Cari ${productText} berkualitas di ${location}. Temukan properti, elektronik, furnitur, dan produk seken terpercaya di Pojok Seken.`;
   }
 
   return "Temukan barang bekas berkualitas dengan harga terbaik di Pojok Seken. Cari properti, elektronik, furnitur, dan produk seken terpercaya.";
 }
 
-export function getSearchMetadataTitle(location?: string) {
-  if (location) return `Barang Bekas di ${location} harga ${SEARCH_SEO_YEAR} | Pojok Seken`;
+export function getSearchMetadataTitle(location?: string, category?: string) {
+  if (location) {
+    const productText = category ? `${category} Bekas` : "Barang Bekas";
+
+    return `${productText} di ${location} harga ${SEARCH_SEO_YEAR} | Pojok Seken`;
+  }
 
   return `Pencarian Barang Bekas Harga ${SEARCH_SEO_YEAR} | Pojok Seken`;
 }
 
-export function getSearchMetadataKeywords(location?: string) {
+export function getSearchMetadataKeywords(location?: string, category?: string) {
   if (!location) return SEARCH_KEYWORDS;
 
+  const categoryKeywords = category
+    ? [
+        `${category.toLowerCase()} bekas ${location}`,
+        `${category.toLowerCase()} seken ${location}`,
+      ]
+    : [];
+
   return [
+    ...categoryKeywords,
     `barang bekas ${location}`,
     `barang seken ${location}`,
     `jual beli barang bekas ${location}`,
@@ -104,6 +169,7 @@ export function getCleanSearchHref(formData: FormData) {
     .getAll("location")
     .map((location) => String(location))
     .filter(Boolean);
+  const category = String(formData.get("category") || "");
   const query = new URLSearchParams();
 
   formData.forEach((value, key) => {
@@ -111,13 +177,15 @@ export function getCleanSearchHref(formData: FormData) {
     if (!stringValue) return;
     if (key === "sort" && stringValue === "default") return;
     if (key === "location" && submittedLocations.length === 1) return;
+    if (key === "category" && category) return;
     query.append(key, stringValue);
   });
 
+  const categoryPath = category ? `/search/${categoryToSlug(category)}` : "/search";
   const path =
     submittedLocations.length === 1
-      ? `/search/${locationToSlug(submittedLocations[0])}`
-      : "/search";
+      ? `${categoryPath === "/search" ? `/search/${ALL_CATEGORY_SLUG}` : categoryPath}/${locationToSlug(submittedLocations[0])}`
+      : categoryPath;
   const queryString = query.toString();
 
   return `${path}${queryString ? `?${queryString}` : ""}`;

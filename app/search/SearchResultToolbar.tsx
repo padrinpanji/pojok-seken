@@ -43,17 +43,15 @@ export default function SearchResultToolbar({ filters, resultCount, title }: Pro
           id="search-sort"
           name="sort"
           defaultValue={filters.sort}
+          onChange={(event) => event.currentTarget.form?.requestSubmit()}
           data-test-id="search-sort-select"
         >
-          <option value="default">Paling sesuai</option>
+          <option value="default">⚡ Paling Sesuai</option>
           <option value="price-asc">Harga terendah</option>
           <option value="price-desc">Harga tertinggi</option>
           <option value="year-desc">Tahun terbaru</option>
         </select>
       </div>
-      <button className="button secondary" type="submit" data-test-id="search-sort-submit">
-        Terapkan
-      </button>
     </form>
   );
 }

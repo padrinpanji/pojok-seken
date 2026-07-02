@@ -7,6 +7,7 @@ import {
   getSearchMetadataDescription,
   getSearchMetadataKeywords,
   getSearchMetadataTitle,
+  getSearchRobots,
   getSearchResultsTitle,
   getSingleParam,
 } from "@/app/search/search-utils";
@@ -18,14 +19,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/search",
   },
-  robots: {
-    index: false,
-    follow: false,
-    googleBot: {
-      index: false,
-      follow: false,
-    },
-  },
+  robots: getSearchRobots(false),
   openGraph: {
     title: getSearchMetadataTitle(),
     description: getSearchMetadataDescription(),
