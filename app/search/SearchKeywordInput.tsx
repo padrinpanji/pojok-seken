@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SearchIcon } from "@/components/Icons";
 
 function MapPinIcon() {
@@ -13,39 +13,82 @@ function MapPinIcon() {
 }
 
 type Props = {
-  defaultValue: string;
+  defaultValue: string[];
   locations: string[];
+  selectedLocations: string[];
 };
 
-export default function SearchKeywordInput({ defaultValue, locations }: Props) {
-  const [value, setValue] = useState(defaultValue);
+function CloseIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M3 3l6 6M9 3 3 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export default function SearchKeywordInput({ defaultValue, locations, selectedLocations }: Props) {
+  const [value, setValue] = useState("");
+  const [selectedKeywords, setSelectedKeywords] = useState(defaultValue);
+  const [selectedLocationsState, setSelectedLocationsState] = useState(selectedLocations);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isEmptyState, setIsEmptyState] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const availableLocations = locations.filter(
+    (loc) =>
+      loc.toLowerCase() !== "indonesia" &&
+      !selectedLocationsState.some(
+        (selectedLocation) => selectedLocation.toLowerCase() === loc.toLowerCase()
+      )
+  );
+
+  useEffect(() => {
+    setSelectedKeywords(defaultValue);
+  }, [defaultValue]);
+
+  useEffect(() => {
+    setSelectedLocationsState(selectedLocations);
+  }, [selectedLocations]);
+
+  function addKeyword(keyword: string) {
+    const trimmedKeyword = keyword.trim();
+    if (!trimmedKeyword) return;
+
+    setSelectedKeywords((current) =>
+      current.some((item) => item.toLowerCase() === trimmedKeyword.toLowerCase())
+        ? current
+        : [...current, trimmedKeyword]
+    );
+    setValue("");
+    setSuggestions([]);
+  }
 
   function computeSuggestions(val: string) {
     const trimmed = val.trim().toLowerCase();
-    if (!trimmed) return { list: filteredLocations.slice(0, 10), empty: true };
+    if (!trimmed) return { list: availableLocations.slice(0, 10), empty: true };
     if (trimmed.length < 2) return { list: [], empty: false };
     return {
-      list: filteredLocations.filter((loc) => loc.toLowerCase().includes(trimmed)).slice(0, 6),
+      list: availableLocations.filter((loc) => loc.toLowerCase().includes(trimmed)).slice(0, 6),
       empty: false,
     };
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
+
+    if (val.endsWith(",")) {
+      addKeyword(val.slice(0, -1));
+      return;
+    }
+
     setValue(val);
     const { list, empty } = computeSuggestions(val);
     setSuggestions(list);
     setIsEmptyState(empty);
   }
 
-  const filteredLocations = locations.filter((loc) => loc.toLowerCase() !== "indonesia");
-
   function handleFocus() {
     if (!value.trim()) {
-      setSuggestions(filteredLocations.slice(0, 10));
+      setSuggestions(availableLocations.slice(0, 10));
       setIsEmptyState(true);
     } else {
       const { list, empty } = computeSuggestions(value);
@@ -59,21 +102,64 @@ export default function SearchKeywordInput({ defaultValue, locations }: Props) {
   }
 
   function handleSelect(loc: string) {
-    setValue(loc);
+    setSelectedLocationsState((current) =>
+      current.some((item) => item.toLowerCase() === loc.toLowerCase()) ? current : [...current, loc]
+    );
+    setValue("");
     setSuggestions([]);
-    inputRef.current?.form?.requestSubmit();
+    inputRef.current?.focus();
+  }
+
+  function handleRemove(loc: string) {
+    setSelectedLocationsState((current) => current.filter((item) => item !== loc));
+  }
+
+  function handleRemoveKeyword(keyword: string) {
+    setSelectedKeywords((current) => current.filter((item) => item !== keyword));
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" || !value.trim()) return;
+
+    event.preventDefault();
+    addKeyword(value);
   }
 
   return (
     <div className="search-input-wrap">
       <SearchIcon />
+      {selectedKeywords.map((keyword) => (
+        <span key={keyword} className="search-location-chip search-keyword-chip">
+          {keyword}
+          <input type="hidden" name="q" value={keyword} />
+          <button
+            type="button"
+            aria-label={`Hapus kata kunci ${keyword}`}
+            onClick={() => handleRemoveKeyword(keyword)}
+          >
+            <CloseIcon />
+          </button>
+        </span>
+      ))}
+      {selectedLocationsState.map((loc) => (
+        <span key={loc} className="search-location-chip">
+          <MapPinIcon />
+          {loc}
+          <input type="hidden" name="location" value={loc} />
+          <button type="button" aria-label={`Hapus lokasi ${loc}`} onClick={() => handleRemove(loc)}>
+            <CloseIcon />
+          </button>
+        </span>
+      ))}
       <input
         ref={inputRef}
         id="search-keyword"
+        className="search-keyword-input"
         name="q"
         type="text"
         value={value}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
         placeholder="Cari nama barang, kategori, lokasi..."

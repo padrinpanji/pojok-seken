@@ -4,6 +4,7 @@ import { useState } from "react";
 import SearchKeywordInput from "@/app/search/SearchKeywordInput";
 import PriceRangeInputs from "@/app/search/PriceRangeInputs";
 import FilterSelect from "@/app/search/FilterSelect";
+import { getCleanSearchHref } from "@/app/search/search-utils";
 
 function FilterIcon() {
   return (
@@ -22,10 +23,10 @@ function TrashIcon() {
 }
 
 type Props = {
-  q: string;
+  q: string[];
   category: string;
   condition: string;
-  location: string;
+  locations: string[];
   sort: string;
   minPrice?: number;
   maxPrice?: number;
@@ -35,21 +36,30 @@ type Props = {
   categories: string[];
   conditions: string[];
   years: string[];
-  locations: string[];
+  availableLocations: string[];
 };
 
 export default function SearchFilterForm({
-  q, category, condition, location, sort,
+  q, category, condition, locations: selectedLocations, sort,
   minPrice, maxPrice, minYear, verified,
-  activeFilterCount, categories, conditions, years, locations,
+  activeFilterCount, categories, conditions, years, availableLocations,
 }: Props) {
   const detailActive = !!(minPrice || maxPrice || condition || verified);
   const [open, setOpen] = useState(detailActive);
   const [verifiedState, setVerifiedState] = useState(verified);
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    window.location.href = getCleanSearchHref(new FormData(event.currentTarget));
+  }
+
   return (
-    <form className="search-filter-card" action="/search" data-test-id="search-filter-form">
-      <input type="hidden" name="location" value={location} />
+    <form
+      className="search-filter-card"
+      action="/search"
+      data-test-id="search-filter-form"
+      onSubmit={handleSubmit}
+    >
       <input type="hidden" name="sort" value={sort} />
       <input type="hidden" name="minYear" value={minYear} />
 
@@ -61,7 +71,11 @@ export default function SearchFilterForm({
             <option key={item} value={item}>{item}</option>
           ))}
         </FilterSelect>
-        <SearchKeywordInput defaultValue={q} locations={locations} />
+        <SearchKeywordInput
+          defaultValue={q}
+          locations={availableLocations}
+          selectedLocations={selectedLocations}
+        />
 
         <button className="button search-submit-btn" type="submit" data-test-id="search-submit">
           Cari
