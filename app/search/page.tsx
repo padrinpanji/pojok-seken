@@ -4,8 +4,7 @@ import ProductCard from "@/components/ProductCard";
 import SchemaScript from "@/components/SchemaScript";
 import { SearchIcon, ShieldIcon } from "@/components/Icons";
 import { formatPrice, getCategories, getProducts, siteConfig, type Product } from "@/data/products";
-import PriceRangeInputs from "@/app/search/PriceRangeInputs";
-import SearchKeywordInput from "@/app/search/SearchKeywordInput";
+import SearchFilterForm from "@/app/search/SearchFilterForm";
 
 export const metadata: Metadata = {
   title: "Search Barang Bekas",
@@ -128,7 +127,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const results = sortProducts(filteredProducts, sort);
   const conditions = [...new Set(productList.map((product) => product.condition))];
   const locations = [...new Set(productList.map((product) => product.location))]
-    .filter((loc) => loc && loc.toLowerCase() !== "indonesia")
+    .filter((loc) => !!loc)
     .sort();
   const years = [...new Set(productList.map((product) => product.year))]
     .filter((y) => y && !isNaN(Number(y)))
@@ -194,96 +193,23 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <main className="search-page section" data-test-id="search-page">
         <div className="container">
           <div className="search-shell" data-test-id="search-shell">
-            {/* Search + filters top bar */}
-            <form className="search-primary" action="/search" data-test-id="search-filter-form">
-              <label className="sr-only" htmlFor="search-keyword">
-                Cari nama atau lokasi
-              </label>
-              <SearchKeywordInput defaultValue={q} locations={locations} />
-              <select
-                name="category"
-                defaultValue={category}
-                aria-label="Pilih kategori"
-                data-test-id="search-category-select"
-              >
-                <option value="">Semua kategori</option>
-                {categories.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="condition"
-                defaultValue={condition}
-                aria-label="Pilih kondisi"
-                data-test-id="search-condition-select"
-              >
-                <option value="">Semua kondisi</option>
-                {conditions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-              <button className="button" type="submit" data-test-id="search-submit">
-                <SearchIcon />
-                Cari
-              </button>
-            </form>
-
-            {/* Secondary filter bar */}
-            <form className="search-filters-bar" action="/search" data-test-id="search-sidebar">
-              <input type="hidden" name="q" defaultValue={q} />
-              <input type="hidden" name="category" defaultValue={category} />
-              <input type="hidden" name="condition" defaultValue={condition} />
-              <input type="hidden" name="location" defaultValue={location} />
-              <input type="hidden" name="sort" defaultValue={sort} />
-
-              <PriceRangeInputs
-                key={`${minPrice ?? ""}-${maxPrice ?? ""}`}
-                defaultMinPrice={minPrice}
-                defaultMaxPrice={maxPrice}
-              />
-
-              <div className="filter-group">
-                <label htmlFor="search-min-year">Tahun rilis</label>
-                <select
-                  key={minYear}
-                  id="search-min-year"
-                  name="minYear"
-                  defaultValue={minYear}
-                  data-test-id="search-min-year-select"
-                >
-                  <option value="">Semua tahun</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>{y} ke atas</option>
-                  ))}
-                </select>
-              </div>
-
-              <label className="check-filter" data-test-id="search-verified-filter">
-                <input
-                  key={String(verified)}
-                  type="checkbox"
-                  name="verified"
-                  value="true"
-                  defaultChecked={verified}
-                />
-                Iklan terverifikasi saja
-              </label>
-
-              <div className="filter-bar-actions">
-                {activeFilterCount > 0 ? (
-                  <Link href="/search" data-test-id="search-reset-filters">
-                    Reset
-                  </Link>
-                ) : null}
-                <button className="button" type="submit" data-test-id="search-sidebar-submit">
-                  Terapkan filter
-                </button>
-              </div>
-            </form>
+            {/* Search + filter card */}
+            <SearchFilterForm
+              q={q}
+              category={category}
+              condition={condition}
+              location={location}
+              sort={sort}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              minYear={minYear}
+              verified={verified}
+              activeFilterCount={activeFilterCount}
+              categories={categories}
+              conditions={conditions}
+              years={years}
+              locations={locations}
+            />
 
             {/* Results + ads sidebar */}
             <div className="search-layout">
