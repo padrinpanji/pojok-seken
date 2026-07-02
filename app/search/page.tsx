@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import SchemaScript from "@/components/SchemaScript";
-import { MapIcon, SearchIcon, ShieldIcon } from "@/components/Icons";
+import { SearchIcon, ShieldIcon } from "@/components/Icons";
 import { formatPrice, getCategories, getProducts, siteConfig, type Product } from "@/data/products";
 import PriceRangeInputs from "@/app/search/PriceRangeInputs";
+import SearchKeywordInput from "@/app/search/SearchKeywordInput";
 
 export const metadata: Metadata = {
   title: "Search Barang Bekas",
@@ -193,25 +194,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <main className="search-page section" data-test-id="search-page">
         <div className="container">
           <div className="search-shell" data-test-id="search-shell">
+            {/* Search + filters top bar */}
             <form className="search-primary" action="/search" data-test-id="search-filter-form">
               <label className="sr-only" htmlFor="search-keyword">
                 Cari nama atau lokasi
               </label>
-              <div className="search-input-wrap">
-                <SearchIcon />
-                <input
-                  id="search-keyword"
-                  type="search"
-                  name="q"
-                  placeholder="Cari nama barang, kategori, lokasi..."
-                  defaultValue={q}
-                  aria-label="Kata kunci pencarian"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  data-test-id="search-keyword-input"
-                />
-              </div>
+              <SearchKeywordInput defaultValue={q} locations={locations} />
               <select
                 name="category"
                 defaultValue={category}
@@ -244,80 +232,67 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </button>
             </form>
 
-            <div className="search-layout">
-              <form className="search-sidebar" action="/search" data-test-id="search-sidebar">
-                <input type="hidden" name="q" defaultValue={q} />
-                <input type="hidden" name="category" defaultValue={category} />
-                <input type="hidden" name="condition" defaultValue={condition} />
-                <input type="hidden" name="sort" defaultValue={sort} />
-                <div className="sidebar-head">
-                  <strong>Saring Hasil</strong>
-                  {activeFilterCount > 0 ? (
-                    <Link href="/search" data-test-id="search-reset-filters">
-                      Reset
-                    </Link>
-                  ) : null}
-                </div>
+            {/* Secondary filter bar */}
+            <form className="search-filters-bar" action="/search" data-test-id="search-sidebar">
+              <input type="hidden" name="q" defaultValue={q} />
+              <input type="hidden" name="category" defaultValue={category} />
+              <input type="hidden" name="condition" defaultValue={condition} />
+              <input type="hidden" name="location" defaultValue={location} />
+              <input type="hidden" name="sort" defaultValue={sort} />
 
-                <div className="filter-group">
-                  <label htmlFor="search-location">Lokasi</label>
-                  <select
-                    key={location}
-                    id="search-location"
-                    name="location"
-                    defaultValue={location}
-                    data-test-id="search-location-select"
-                  >
-                    <option value="">Semua lokasi</option>
-                    {locations.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <PriceRangeInputs
+                key={`${minPrice ?? ""}-${maxPrice ?? ""}`}
+                defaultMinPrice={minPrice}
+                defaultMaxPrice={maxPrice}
+              />
 
-                <PriceRangeInputs
-                    key={`${minPrice ?? ""}-${maxPrice ?? ""}`}
-                    defaultMinPrice={minPrice}
-                    defaultMaxPrice={maxPrice}
+              <div className="filter-group">
+                <label htmlFor="search-min-year">Tahun rilis</label>
+                <select
+                  key={minYear}
+                  id="search-min-year"
+                  name="minYear"
+                  defaultValue={minYear}
+                  data-test-id="search-min-year-select"
+                >
+                  <option value="">Semua tahun</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y} ke atas</option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="check-filter" data-test-id="search-verified-filter">
+                <input
+                  key={String(verified)}
+                  type="checkbox"
+                  name="verified"
+                  value="true"
+                  defaultChecked={verified}
                 />
+                Iklan terverifikasi saja
+              </label>
 
-                <div className="filter-group">
-                  <label htmlFor="search-min-year">Tahun rilis</label>
-                  <select
-                    key={minYear}
-                    id="search-min-year"
-                    name="minYear"
-                    defaultValue={minYear}
-                    data-test-id="search-min-year-select"
-                  >
-                    <option value="">Semua tahun</option>
-                    {years.map((y) => (
-                      <option key={y} value={y}>{y} ke atas</option>
-                    ))}
-                  </select>
-                </div>
-
-                <label className="check-filter" data-test-id="search-verified-filter">
-                  <input
-                    key={String(verified)}
-                    type="checkbox"
-                    name="verified"
-                    value="true"
-                    defaultChecked={verified}
-                  />
-                  Iklan terverifikasi saja
-                </label>
-
-                <div className="filter-note" data-test-id="search-filter-note">
-                  <MapIcon />
-                  <p>Pilih lokasi untuk melihat barang yang lebih mudah dicek langsung.</p>
-                </div>
-                <button className="button sidebar-submit" type="submit" data-test-id="search-sidebar-submit">
+              <div className="filter-bar-actions">
+                {activeFilterCount > 0 ? (
+                  <Link href="/search" data-test-id="search-reset-filters">
+                    Reset
+                  </Link>
+                ) : null}
+                <button className="button" type="submit" data-test-id="search-sidebar-submit">
                   Terapkan filter
                 </button>
-              </form>
+              </div>
+            </form>
+
+            {/* Results + ads sidebar */}
+            <div className="search-layout">
+              {/* Ads slot */}
+              <aside className="search-ads-slot" aria-label="Iklan" data-test-id="search-ads-slot">
+                <div className="ads-placeholder">
+                  <span>Sidebar Ads Search Slot Available</span>
+                </div>
+              </aside>
 
               <section className="search-results" data-test-id="search-results">
                 <form className="result-toolbar" action="/search" data-test-id="search-result-toolbar">
